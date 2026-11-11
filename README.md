@@ -13,7 +13,7 @@ the source frames rather than eyeballed.
 
 ## Stack
 
-- **Next.js 15** (App Router, React 19, TypeScript strict)
+- **Next.js 16** (App Router, React 19.2, TypeScript strict, Turbopack)
 - **Tailwind CSS v4**
 - **framer-motion** for the segmented control, accordions and view transitions
 - **Web Audio API** for the tick/confirm tones and the generative lo-fi player
@@ -25,6 +25,11 @@ npm run dev      # http://localhost:3000
 npm run build && npm start
 npm run typecheck
 ```
+
+> **Note:** `next dev` and `next build` now write to separate output
+> directories (`.next/dev` and `.next`), so you can keep the dev server
+> running while you build. If you ever see a stale asset 404 in the console,
+> restart the dev server.
 
 ## What's in it
 
@@ -90,6 +95,20 @@ The page is server-rendered per request. The server hands the exact instant it
 rendered to the client, and `useSyncExternalStore` uses that value for both the
 server markup and the first client render, so hydration never mismatches — and
 the very first paint already shows the correct time instead of a placeholder.
+
+## Error handling
+
+`lib/clientGuard.ts` renders a tiny inline script into the document head. It
+installs an `unhandledrejection` listener **before any client bundle loads**,
+which matters because React 19 gives every resource it preloads a promise that
+is rejected with the DOM **error event** when the resource fails to load — and
+nothing awaits that promise, so it surfaces as an unhandled rejection and the
+Next.js dev overlay renders it as a bare `Runtime Error: [object Event]`.
+
+The guard logs those rejections in full (type, own properties, creation stack)
+so nothing is silently swallowed, and keeps them out of the overlay. Genuine
+application errors are left completely alone — they still reach React's error
+boundary and the dev overlay exactly as they should.
 
 ## Layout
 

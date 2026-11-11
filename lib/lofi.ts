@@ -133,7 +133,12 @@ export class LoFiEngine {
         this.startNoiseBed();
       }
 
-      if (this.ctx.state === "suspended") void this.ctx.resume().catch(() => {});
+      if (this.ctx.state === "suspended") {
+        const resumed = this.ctx.resume();
+        if (resumed && typeof resumed.catch === "function") {
+          void resumed.catch(() => {});
+        }
+      }
       return true;
     } catch {
       return false;
@@ -350,7 +355,8 @@ export class LoFiEngine {
       this.timer = null;
     }
     try {
-      void this.ctx?.close().catch(() => {});
+      const closed = this.ctx?.close();
+      if (closed && typeof closed.catch === "function") void closed.catch(() => {});
     } catch {
       /* nothing to do */
     }

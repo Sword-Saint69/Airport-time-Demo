@@ -94,7 +94,12 @@ export function Studio({ initialNow }: StudioProps) {
         if (!Ctor) return;
         if (!audioCtx.current) audioCtx.current = new Ctor();
         const ctx = audioCtx.current;
-        if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+        if (ctx.state === "suspended") {
+          const resumed = ctx.resume();
+          if (resumed && typeof resumed.catch === "function") {
+            void resumed.catch(() => {});
+          }
+        }
 
         const gainValue = sound === "system" ? 0.16 : (volume / 100) * 0.16;
         const osc = ctx.createOscillator();
@@ -192,19 +197,36 @@ export function Studio({ initialNow }: StudioProps) {
 
   /* --- expanded mode --------------------------------------------------- */
 
-  const toggleExpanded = useCallback(() => {
-    setExpanded((v) => {
-      const next = !v;
-      if (typeof document !== "undefined") {
-        const el = document.documentElement;
-        if (next && el.requestFullscreen) void el.requestFullscreen().catch(() => {});
-        else if (!next && document.fullscreenElement && document.exitFullscreen) {
-          void document.exitFullscreen().catch(() => {});
-        }
-      }
-      return next;
-    });
+  /**
+   * The current value of `expanded`, kept in a ref so the fullscreen side
+   * effect can run inside a click handler without living in a state
+   * updater — React StrictMode invokes updaters twice, which would request
+   * fullscreen twice and make the first request fail.
+   */
+  const expandedRef = useRef(false);
+
+  /** Call a platform API that returns a promise without ever letting it reject. */
+  const safely = useCallback((result: unknown) => {
+    if (result && typeof (result as Promise<void>).catch === "function") {
+      void (result as Promise<void>).catch(() => {});
+    }
   }, []);
+
+  const toggleExpanded = useCallback(() => {
+    const next = !expandedRef.current;
+    expandedRef.current = next;
+    setExpanded(next);
+
+    if (typeof document === "undefined") return;
+
+    const el = document.documentElement;
+
+    if (next) {
+      if (el.requestFullscreen) safely(el.requestFullscreen());
+    } else if (document.fullscreenElement && document.exitFullscreen) {
+      safely(document.exitFullscreen());
+    }
+  }, [safely]);
 
   const closeAll = useCallback(() => {
     setPreferencesOpen(false);
