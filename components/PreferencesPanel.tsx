@@ -60,7 +60,7 @@ export function PreferencesPanel({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -18 }}
           transition={{ type: "spring", stiffness: 380, damping: 36 }}
-          className="absolute left-0 top-0 z-30 flex h-full w-[min(300px,80vw)] flex-col gap-3.5 overflow-y-auto px-5 pb-6 pt-[clamp(58px,7vh,86px)] text-[var(--fg)]"
+          className="absolute left-0 top-0 z-30 flex h-full w-[min(300px,80vw)] flex-col gap-3.5 overflow-y-auto px-5 pb-6 pt-[clamp(74px,9.4vh,110px)] text-[var(--fg)]"
         >
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fg-3)]">
               System Preferences
@@ -79,16 +79,22 @@ export function PreferencesPanel({
               ]}
             />
 
-            <div className="flex items-center gap-3">
+            <div
+              role="radiogroup"
+              aria-label="LED palette"
+              className="flex items-center gap-3"
+            >
               {BOARD_COLORS.map((swatch) => {
                 const active = swatch.id === color;
                 return (
                   <button
                     key={swatch.id}
                     type="button"
+                    role="radio"
                     title={swatch.label}
                     aria-label={swatch.label}
-                    aria-pressed={active}
+                    aria-checked={active}
+                    tabIndex={active ? 0 : -1}
                     onClick={() => onColorChange(swatch.id)}
                     className={`h-9 w-9 rounded-full transition-transform duration-200 ${
                       active ? "scale-110" : "hover:scale-105"
@@ -122,7 +128,7 @@ export function PreferencesPanel({
             />
 
             <div className="relative">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <label htmlFor="volume" className="sr-only">
                   Volume
                 </label>

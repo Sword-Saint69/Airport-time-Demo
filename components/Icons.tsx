@@ -72,22 +72,6 @@ export function IconSun(props: IconProps) {
   );
 }
 
-export function IconClock(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <circle cx="12" cy="12" r="8.4" />
-      <path d="M12 7.2V12l3.2 2" />
-    </svg>
-  );
-}
-
-export function IconChevron(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path d="M9 5.5 15.5 12 9 18.5" />
-    </svg>
-  );
-}
 
 export function IconCoffee(props: IconProps) {
   return (
@@ -125,19 +109,3 @@ export function IconReset(props: IconProps) {
   );
 }
 
-export function IconCheck(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path d="M5.5 12.6 10 17l8.5-9.4" />
-    </svg>
-  );
-}
-
-export function IconGlobe(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <circle cx="12" cy="12" r="8.4" />
-      <path d="M3.6 12h16.8M12 3.6c2.2 2.3 3.4 5.3 3.4 8.4S14.2 18.1 12 20.4c-2.2-2.3-3.4-5.3-3.4-8.4S9.8 5.9 12 3.6Z" />
-    </svg>
-  );
-}

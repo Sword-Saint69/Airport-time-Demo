@@ -1,7 +1,14 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { CELL_ADVANCE, GLYPH_H, GLYPH_W, glyphFor } from "@/lib/dotFont";
+import {
+  CELL_ADVANCE,
+  GLYPH_H,
+  GLYPH_W,
+  glyphFor,
+  textAdvance,
+  textColumns,
+} from "@/lib/dotFont";
 import type { City } from "@/lib/cities";
 import { formatCityClock } from "@/lib/time";
 
@@ -69,8 +76,9 @@ const BoardLine = memo(function BoardLine({
   const timeDots = useMemo(() => litDotsFor(time, TIME_COL), [time]);
   const cityDots = useMemo(() => litDotsFor(label, CITY_COL), [label]);
 
-  const cityCols = label.length * CELL_ADVANCE - 1;
-  const overflow = cityCols > CITY_FIELD_COLS;
+  /** Full advance of the name, used as the marquee copy pitch. */
+  const pitch = textAdvance(label);
+  const overflow = textColumns(label) > CITY_FIELD_COLS;
 
   return (
     <g transform={`translate(0 ${top})`}>
@@ -103,20 +111,28 @@ const BoardLine = memo(function BoardLine({
         </g>
 
         {overflow ? (
-          <g className="wt-marquee" style={{ ["--marquee-shift" as string]: "-50%" }}>
-            <g fill="var(--dot-lit)">
-              {[0, 1].map((copy) =>
-                cityDots.map((d, i) => (
-                  <rect
-                    key={`c${copy}-${i}`}
-                    x={d.x + copy * (cityCols + 1) + DOT_INSET}
-                    y={d.y + DOT_INSET}
-                    width={DOT_SIZE}
-                    height={DOT_SIZE}
-                    rx={DOT_RADIUS}
-                  />
-                )),
-              )}
+          <g clipPath="url(#wt-city-clip)">
+            <g
+              className="wt-marquee"
+              style={{
+                ["--marquee-shift" as string]: `-${pitch}px`,
+                ["--marquee-duration" as string]: `${Math.max(9, Math.round(pitch * 0.24))}s`,
+              }}
+            >
+              <g fill="var(--dot-lit)">
+                {[0, 1].map((copy) =>
+                  cityDots.map((d, i) => (
+                    <rect
+                      key={`c${copy}-${i}`}
+                      x={d.x + copy * pitch + DOT_INSET}
+                      y={d.y + DOT_INSET}
+                      width={DOT_SIZE}
+                      height={DOT_SIZE}
+                      rx={DOT_RADIUS}
+                    />
+                  )),
+                )}
+              </g>
             </g>
           </g>
         ) : (
@@ -163,7 +179,7 @@ export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTim
       viewBox={`0 0 ${MATRIX_COLS} ${height}`}
       className="h-auto w-full"
       preserveAspectRatio="xMidYMid meet"
-      role="img"
+      role="group"
       aria-label="World time board"
     >
       <defs>
@@ -190,6 +206,10 @@ export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTim
             )}
           </g>
         </pattern>
+        {/* Long city names scroll inside the city field only. */}
+        <clipPath id="wt-city-clip">
+          <rect x={CITY_COL} y={0} width={CITY_FIELD_COLS} height={height} />
+        </clipPath>
       </defs>
 
       {/* Clock field */}

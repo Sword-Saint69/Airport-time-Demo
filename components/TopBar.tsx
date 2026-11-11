@@ -30,7 +30,7 @@ export function TopBar({
   accessory,
 }: TopBarProps) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 px-[clamp(12px,1.6vw,28px)] pt-[clamp(12px,1.6vw,28px)]">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-[clamp(12px,1.6vw,28px)] pt-[clamp(12px,1.6vw,28px)]">
       <div className="pointer-events-auto flex flex-col items-start gap-2">
         <div className="flex items-center gap-2.5">
           <Segmented

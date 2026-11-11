@@ -58,6 +58,8 @@ const F = {
   Z: ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
 
   ":": [".....", "..#..", "..#..", ".....", "..#..", "..#..", "....."],
+  "'": ["..#..", ".....", ".....", ".....", ".....", ".....", "....."],
+  "\u2019": ["..#..", ".....", ".....", ".....", ".....", ".....", "....."],
   ".": [".....", ".....", ".....", ".....", ".....", ".....", "..#.."],
   ",": [".....", ".....", ".....", ".....", ".....", "..#..", ".#..."],
   "-": [".....", ".....", ".....", "#####", ".....", ".....", "....."],
@@ -75,15 +77,25 @@ export const DOT_FONT: Record<string, Glyph> = F as unknown as Record<string, Gl
 const BLANK: Glyph = F[" "];
 
 /**
- * Glyph for a character. Uppercases letters, maps a few typographic
+ * Glyph for a character. Uppercases letters, folds accents onto their base
+ * letter (the board has no room for diacritics), maps a few typographic
  * characters onto their display equivalent and falls back to a blank cell.
  */
 export function glyphFor(ch: string): Glyph {
   const direct = DOT_FONT[ch];
   if (direct) return direct;
+
   const upper = DOT_FONT[ch.toUpperCase()];
   if (upper) return upper;
-  if (ch === "\u00b0" || ch === "\u2019") return DOT_FONT["°"];
+
+  // Fold accents: "Ã" -> "A", "Ç" -> "C", "ñ" -> "N".
+  const folded = ch.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  if (folded !== ch) {
+    const foldedUpper = DOT_FONT[folded.toUpperCase()];
+    if (foldedUpper) return foldedUpper;
+  }
+
+  if (ch === "\u00b0") return DOT_FONT["°"];
   if (ch === "\u2014" || ch === "\u2013" || ch === "\u2212") return DOT_FONT["-"];
   return BLANK;
 }

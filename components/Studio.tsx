@@ -20,8 +20,13 @@ import { useNow } from "@/lib/useNow";
 
 const DEFAULT_LOCATION_ID = "new-york";
 
-export function Studio() {
-  const now = useNow();
+export interface StudioProps {
+  /** The instant the server rendered the page (ms since the epoch). */
+  initialNow: number;
+}
+
+export function Studio({ initialNow }: StudioProps) {
+  const now = useNow(initialNow);
 
   const [tab, setTab] = useState<StudioTab>("world");
   const [bottomView, setBottomView] = useState<"clock" | "map">("clock");
@@ -211,7 +216,6 @@ export function Studio() {
     bottomView,
     boardMode,
     cities,
-    dimColor,
     expanded,
     handlePickCity,
     litColor,

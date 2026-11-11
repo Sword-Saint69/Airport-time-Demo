@@ -54,8 +54,16 @@ The board is drawn as one SVG:
   between them, exactly like the reference;
 - lit dots drawn per glyph on top, landing on precisely the same lattice.
 
-Long city names scroll seamlessly by rendering two copies of the name and
-translating the group.
+Long city names scroll seamlessly by rendering two copies of the name inside a
+`clipPath` that confines them to the city field, and translating the group by
+exactly one name-pitch — in SVG user units, so it stays resolution independent.
+
+## Rendering the live clock
+
+The page is server-rendered per request. The server hands the exact instant it
+rendered to the client, and `useSyncExternalStore` uses that value for both the
+server markup and the first client render, so hydration never mismatches — and
+the very first paint already shows the correct time instead of a placeholder.
 
 ## Layout
 

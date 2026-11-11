@@ -84,8 +84,21 @@ export default function WorldMap(props: WorldMapProps): React.ReactElement {
         return (
           <g
             key={marker.id}
+            role="button"
+            tabIndex={0}
+            aria-label={label}
             cursor={onMarkerClick ? "pointer" : undefined}
             onClick={onMarkerClick ? () => onMarkerClick(marker.id) : undefined}
+            onKeyDown={
+              onMarkerClick
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onMarkerClick(marker.id);
+                    }
+                  }
+                : undefined
+            }
           >
             <title>{label}</title>
             <circle cx={col} cy={row} r={radius} fill={activeColor} />
@@ -116,7 +129,7 @@ export default function WorldMap(props: WorldMapProps): React.ReactElement {
       width="100%"
       height="100%"
       shapeRendering="crispEdges"
-      role="img"
+      role="group"
       aria-label="World map showing city time zones"
       className={className}
     >

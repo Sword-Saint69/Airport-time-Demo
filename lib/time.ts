@@ -44,20 +44,47 @@ interface ZonedParts {
   second: number;
 }
 
+/**
+ * Cache the `Intl.DateTimeFormat` instances.
+ *
+ * The board formats five cities every second; building a formatter per call
+ * is the single hottest thing in the render loop, so they are memoised by
+ * their options.
+ */
+const FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>();
+
+function getFormatter(key: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const cached = FORMATTER_CACHE.get(key);
+  if (cached) return cached;
+  const formatter = new Intl.DateTimeFormat("en-US", options);
+  FORMATTER_CACHE.set(key, formatter);
+  return formatter;
+}
+
 /** Resolve a time zone, falling back to UTC when the id is not recognised. */
 function resolveTimeZone(timeZone: string): string {
+  const cached = VALID_ZONES.get(timeZone);
+  if (cached !== undefined) return cached;
+
+  let resolved: string;
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone });
-    return timeZone;
+    getFormatter(`valid:${timeZone}`, { timeZone });
+    resolved = timeZone;
   } catch {
-    return FALLBACK_TIME_ZONE;
+    resolved = FALLBACK_TIME_ZONE;
   }
+  VALID_ZONES.set(timeZone, resolved);
+  return resolved;
 }
+
+const VALID_ZONES = new Map<string, string>();
 
 /** Read the wall-clock parts of `date` as seen in `timeZone`. */
 function readZonedParts(timeZone: string, date: Date): ZonedParts {
+  if (Number.isNaN(date.getTime())) return { ...EPOCH_PARTS };
+
   try {
-    const formatter = new Intl.DateTimeFormat("en-US", {
+    const formatter = getFormatter(`parts:${timeZone}`, {
       timeZone,
       hourCycle: "h23",
       year: "numeric",
@@ -92,10 +119,6 @@ function readZonedParts(timeZone: string, date: Date): ZonedParts {
       second: values.second ?? EPOCH_PARTS.second,
     };
   } catch {
-    if (Number.isNaN(date.getTime())) {
-      return { ...EPOCH_PARTS };
-    }
-
     return {
       year: date.getUTCFullYear(),
       month: date.getUTCMonth() + 1,
@@ -129,6 +152,10 @@ export function getCityTime(city: Pick<City, "timeZone">, date: Date): CityTime 
 
 /** UTC offset of the city's time zone at that instant (handles DST). */
 export function getGmtOffset(city: Pick<City, "timeZone">, date: Date): GmtOffset {
+  if (Number.isNaN(date.getTime())) {
+    return { minutes: 0, label: "GMT+0" };
+  }
+
   const parts = readZonedParts(resolveTimeZone(city.timeZone), date);
 
   const asUtc = Date.UTC(
@@ -155,8 +182,10 @@ export function formatCityClock(city: Pick<City, "timeZone">, date: Date): strin
 
 /** "Sun, 04 Oct" style short date string (English, always English regardless of locale). */
 export function formatShortDate(date: Date): string {
+  if (Number.isNaN(date.getTime())) return "";
+
   try {
-    const formatter = new Intl.DateTimeFormat("en-US", {
+    const formatter = getFormatter("short-date", {
       weekday: "short",
       day: "2-digit",
       month: "short",
@@ -178,6 +207,7 @@ export function formatShortDate(date: Date): string {
 
 /** Format a GMT offset as a compact label, e.g. "GMT+0", "GMT-4", "GMT+5:45". */
 function formatGmtLabel(minutes: number): string {
+  if (!Number.isFinite(minutes)) return "GMT+0";
   if (minutes === 0) {
     return "GMT+0";
   }

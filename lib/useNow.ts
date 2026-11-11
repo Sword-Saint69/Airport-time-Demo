@@ -1,14 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
-
-/**
- * The instant the static HTML was authored for. It reproduces the reference
- * frame exactly (06:28 Los Angeles / 09:28 New York / 14:28 London / 17:28
- * Dubai / 22:28 Tokyo, Sun 04 Oct), and gives the server and the first client
- * render an identical value so hydration never mismatches.
- */
-const SERVER_TIME = Date.parse("2026-10-04T13:28:00Z");
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -41,18 +33,16 @@ function getSnapshot() {
   return Math.floor(Date.now() / 1000) * 1000;
 }
 
-/** Snapshot used for the server render and for the first client render. */
-function getServerSnapshot() {
-  return SERVER_TIME;
-}
-
 /**
  * A clock that ticks once a second and stays in sync with the wall clock.
  *
- * `useSyncExternalStore` guarantees the server markup and the first client
- * render agree, then hands over to the live clock right after hydration.
+ * `useSyncExternalStore` guarantees that the server markup and the first
+ * client render agree — both use `initialMs`, the instant the server
+ * rendered the page — and then hands over to the live clock immediately
+ * after hydration.
  */
-export function useNow(): Date {
+export function useNow(initialMs: number): Date {
+  const getServerSnapshot = useCallback(() => initialMs, [initialMs]);
   const ms = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   return useMemo(() => new Date(ms), [ms]);
 }

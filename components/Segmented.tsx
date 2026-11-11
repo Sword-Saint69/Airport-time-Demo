@@ -21,6 +21,9 @@ export interface SegmentedProps<T extends string> {
 
 /**
  * A macOS-style segmented control with a sliding selection pill.
+ *
+ * Implemented as a radio group: the options are mutually exclusive choices,
+ * and only the selected one is in the tab order (roving tabindex).
  */
 export function Segmented<T extends string>({
   options,
@@ -36,7 +39,7 @@ export function Segmented<T extends string>({
 
   return (
     <div
-      role="tablist"
+      role="radiogroup"
       aria-label={label}
       className={`relative inline-flex items-center gap-0.5 rounded-full bg-[var(--glass)] p-[3px] backdrop-blur-xl ${className}`}
     >
@@ -45,14 +48,25 @@ export function Segmented<T extends string>({
         return (
           <button
             key={option.value}
-            role="tab"
+            role="radio"
             type="button"
-            aria-selected={active}
+            aria-checked={active}
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(option.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+              e.preventDefault();
+              const index = options.findIndex((o) => o.value === value);
+              const delta = e.key === "ArrowRight" ? 1 : -1;
+              const next = options[(index + delta + options.length) % options.length];
+              onChange(next.value);
+              const buttons = e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                '[role="radio"]',
+              );
+              buttons?.[(index + delta + options.length) % options.length]?.focus();
+            }}
             className={`relative z-10 whitespace-nowrap rounded-full ${pad} ${text} font-medium transition-colors duration-200 ${
-              active
-                ? "text-[var(--fg)]"
-                : "text-[var(--fg-2)] hover:text-[var(--fg)]"
+              active ? "text-[var(--fg)]" : "text-[var(--fg-2)] hover:text-[var(--fg)]"
             }`}
           >
             {active ? (

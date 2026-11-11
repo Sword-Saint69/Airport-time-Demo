@@ -275,11 +275,20 @@ export function getCity(id: string): City | undefined {
 }
 
 /**
- * Case-insensitive search over city name + country. Returns matches sorted so that
- * names starting with the query come first, then other name matches, then country matches.
+ * Strip diacritics and lowercase, so "sao" finds "São Paulo" and
+ * "zurich" finds "Zürich".
+ */
+function fold(value: string): string {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+/**
+ * Case-insensitive, accent-insensitive search over city name + country.
+ * Returns matches sorted so that names starting with the query come first,
+ * then other name matches, then country matches.
  */
 export function searchCities(query: string, limit?: number): City[] {
-  const needle = query.trim().toLowerCase();
+  const needle = fold(query.trim());
 
   const prefixMatches: City[] = [];
   const nameMatches: City[] = [];
@@ -287,8 +296,8 @@ export function searchCities(query: string, limit?: number): City[] {
 
   if (needle.length > 0) {
     for (const city of CITIES) {
-      const name = city.name.toLowerCase();
-      const country = city.country.toLowerCase();
+      const name = fold(city.name);
+      const country = fold(city.country);
 
       if (name.startsWith(needle)) {
         prefixMatches.push(city);

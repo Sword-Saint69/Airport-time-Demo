@@ -57,11 +57,17 @@ export function FocusView({ onSound }: FocusViewProps) {
 
   const toggle = useCallback(() => {
     setCompleted(false);
-    setRunning((r) => {
-      onSound?.(r ? "stop" : "start");
-      return !r;
-    });
-  }, [onSound]);
+    setRunning((r) => !r);
+  }, []);
+
+  // The tone fires from an effect so the state updater stays pure (React
+  // StrictMode double-invokes updaters in development).
+  const previousRunning = useRef(running);
+  useEffect(() => {
+    if (previousRunning.current === running) return;
+    previousRunning.current = running;
+    onSound?.(running ? "start" : "stop");
+  }, [running, onSound]);
 
   const reset = useCallback(() => {
     setRunning(false);
