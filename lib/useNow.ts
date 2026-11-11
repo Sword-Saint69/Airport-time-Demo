@@ -1,35 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+
+/**
+ * The instant the static HTML was authored for. It reproduces the reference
+ * frame exactly (06:28 Los Angeles / 09:28 New York / 14:28 London / 17:28
+ * Dubai / 22:28 Tokyo, Sun 04 Oct), and gives the server and the first client
+ * render an identical value so hydration never mismatches.
+ */
+const SERVER_TIME = Date.parse("2026-10-04T13:28:00Z");
+
+const listeners = new Set<() => void>();
+let timer: ReturnType<typeof setInterval> | null = null;
+let lastNotifiedSecond = -1;
+
+function tick() {
+  const second = Math.floor(Date.now() / 1000);
+  if (second === lastNotifiedSecond) return;
+  lastNotifiedSecond = second;
+  for (const listener of listeners) listener();
+}
+
+function subscribe(onStoreChange: () => void) {
+  listeners.add(onStoreChange);
+  if (timer === null) {
+    timer = setInterval(tick, 200);
+    tick();
+  }
+  return () => {
+    listeners.delete(onStoreChange);
+    if (listeners.size === 0 && timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
+}
+
+/** Live snapshot: the current wall clock, truncated to whole seconds. */
+function getSnapshot() {
+  return Math.floor(Date.now() / 1000) * 1000;
+}
+
+/** Snapshot used for the server render and for the first client render. */
+function getServerSnapshot() {
+  return SERVER_TIME;
+}
 
 /**
  * A clock that ticks once a second and stays in sync with the wall clock.
+ *
+ * `useSyncExternalStore` guarantees the server markup and the first client
+ * render agree, then hands over to the live clock right after hydration.
  */
-export function useNow(intervalMs = 1000): Date {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    let raf = 0;
-    let timeout = 0;
-    let cancelled = false;
-
-    const schedule = () => {
-      if (cancelled) return;
-      setNow(new Date());
-      timeout = window.setTimeout(schedule, intervalMs);
-    };
-
-    // Re-align to the next whole second so the displayed time never drifts.
-    const delay = intervalMs - (Date.now() % intervalMs);
-    timeout = window.setTimeout(schedule, delay);
-    raf = requestAnimationFrame(() => {});
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-      cancelAnimationFrame(raf);
-    };
-  }, [intervalMs]);
-
-  return now;
+export function useNow(): Date {
+  const ms = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useMemo(() => new Date(ms), [ms]);
 }

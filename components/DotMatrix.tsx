@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useMemo } from "react";
 import { CELL_ADVANCE, GLYPH_H, GLYPH_W, glyphFor } from "@/lib/dotFont";
 
 /** Corner radius of a single LED dot, in dot units. */
@@ -97,76 +97,6 @@ export function DotText({
           />
         ))}
       </g>
-    </svg>
-  );
-}
-
-export interface MatrixFieldProps {
-  /** Number of matrix columns the field spans. */
-  columns: number;
-  /** Number of text lines the field spans. */
-  rows?: number;
-  /** Vertical distance between the first dot row of two lines, in units. */
-  rowPitch?: number;
-  /** Colour of the unlit dots. */
-  dim?: string;
-  className?: string;
-  style?: React.CSSProperties;
-}
-
-/**
- * The unlit "off" dots of the board.
- *
- * Rendered as a single SVG filled with a repeating pattern of 5-dot groups
- * separated by a single empty column, so the whole field costs one node
- * instead of thousands.
- */
-export function MatrixField({
-  columns,
-  rows = 1,
-  rowPitch = GLYPH_H,
-  dim = "var(--dot-dim)",
-  className,
-  style,
-}: MatrixFieldProps) {
-  const id = useId().replace(/[:]/g, "");
-  const patternId = `wt-dots-${id}`;
-  const heightUnits = (rows - 1) * rowPitch + GLYPH_H;
-
-  return (
-    <svg
-      width={columns * 10}
-      height={heightUnits * 10}
-      viewBox={`0 0 ${columns} ${heightUnits}`}
-      className={className}
-      style={{ display: "block", ...style }}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <pattern
-          id={patternId}
-          x={0}
-          y={0}
-          width={CELL_ADVANCE}
-          height={rowPitch}
-          patternUnits="userSpaceOnUse"
-        >
-          <g fill={dim}>
-            {Array.from({ length: GLYPH_W }, (_, col) => (
-              <rect
-                key={col}
-                x={col + DOT_INSET}
-                y={DOT_INSET}
-                width={DOT_SIZE}
-                height={DOT_SIZE}
-                rx={DOT_RADIUS}
-              />
-            ))}
-          </g>
-        </pattern>
-      </defs>
-      <rect x={0} y={0} width={columns} height={heightUnits} fill={`url(#${patternId})`} />
     </svg>
   );
 }

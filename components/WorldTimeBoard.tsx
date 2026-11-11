@@ -54,11 +54,13 @@ const BoardLine = memo(function BoardLine({
   time,
   city,
   rowIndex,
+  active,
   onSelectCity,
 }: {
   time: string;
   city: City;
   rowIndex: number;
+  active: boolean;
   onSelectCity?: (city: City) => void;
 }) {
   const top = rowIndex * ROW_PITCH;
@@ -78,6 +80,7 @@ const BoardLine = memo(function BoardLine({
         onClick={() => onSelectCity?.(city)}
         role="button"
         tabIndex={0}
+        aria-current={active ? "true" : undefined}
         aria-label={`${label} ${time}`}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -143,7 +146,7 @@ export interface WorldTimeBoardProps {
 }
 
 /** The LED departure board. */
-export function WorldTimeBoard({ cities, now, onSelectCity }: WorldTimeBoardProps) {
+export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTimeBoardProps) {
   const height = (MATRIX_ROWS - 1) * ROW_PITCH + GLYPH_H;
 
   const rows = useMemo(
@@ -212,6 +215,7 @@ export function WorldTimeBoard({ cities, now, onSelectCity }: WorldTimeBoardProp
           time={time}
           city={city}
           rowIndex={i}
+          active={city.id === activeId}
           onSelectCity={onSelectCity}
         />
       ))}

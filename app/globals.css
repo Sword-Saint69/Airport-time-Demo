@@ -219,23 +219,6 @@
   animation-play-state: paused;
 }
 
-/* Board rows brighten on hover. */
-.wt-row {
-  transition: opacity 180ms ease;
-}
-
-.wt-row:hover {
-  opacity: 1;
-}
-
-.wt-row:focus-visible {
-  outline: none;
-}
-
-.wt-row:focus-visible > g:first-of-type {
-  opacity: 1;
-}
-
 /* The board slides in line by line when the face appears. */
 @keyframes wt-row-in {
   from {

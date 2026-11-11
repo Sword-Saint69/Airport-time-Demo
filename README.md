@@ -3,7 +3,7 @@
 A pixel-faithful recreation of the Apple Watch **World Time** face, rebuilt for the
 web as a full-screen LED departure board.
 
-![board](docs/preview.svg)
+![board](docs/preview.png)
 
 Everything you see was reverse-engineered from a 1728×1080 60 fps reference
 recording: the 5×7 dot-matrix font, the exact cell rhythm, the unlit "off" dot
