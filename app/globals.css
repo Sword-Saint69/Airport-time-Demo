@@ -215,6 +215,81 @@
   will-change: transform;
 }
 
+/* --- Drawer pill sliders ---------------------------------------------- */
+
+/* A 36px pill track: #222222 groove, #2e2e2e fill up to the value. */
+.wt-pill-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 36px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.wt-pill-range::-webkit-slider-runnable-track {
+  height: 36px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #2e2e2e 0%,
+    #2e2e2e var(--fill, 50%),
+    #222222 var(--fill, 50%),
+    #222222 100%
+  );
+}
+
+.wt-pill-range::-moz-range-track {
+  height: 36px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #2e2e2e 0%,
+    #2e2e2e var(--fill, 50%),
+    #222222 var(--fill, 50%),
+    #222222 100%
+  );
+}
+
+.wt-pill-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 11px;
+  border-radius: 999px;
+  background: #f2f2f5;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.wt-pill-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: #f2f2f5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.wt-pill-range:focus-visible {
+  outline: 2px solid #9a9a9a;
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+/* --- Little equalizer bars in the lo-fi queue ------------------------- */
+
+@keyframes wt-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 .wt-marquee:hover {
   animation-play-state: paused;
 }

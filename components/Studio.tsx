@@ -16,9 +16,19 @@ import { TopBar, type StudioTab } from "@/components/TopBar";
 import { DigitalBoard, WorldTimeBoard } from "@/components/WorldTimeBoard";
 import WorldMap, { type MapMarker } from "@/components/WorldMap";
 import { DEFAULT_CITIES, getCity, type City } from "@/lib/cities";
+import { LoFiEngine, type LoFiState } from "@/lib/lofi";
+import { MAP_CITIES } from "@/lib/mapCities";
+import { formatLocalTime12, isDaytime } from "@/lib/time";
 import { useNow } from "@/lib/useNow";
 
 const DEFAULT_LOCATION_ID = "new-york";
+
+const INITIAL_MUSIC: LoFiState = {
+  playing: false,
+  trackIndex: 0,
+  shuffle: false,
+  volume: 0.6,
+};
 
 export interface StudioProps {
   /** The instant the server rendered the page (ms since the epoch). */
@@ -33,7 +43,9 @@ export function Studio({ initialNow }: StudioProps) {
   const [boardMode, setBoardMode] = useState<BoardMode>("fids");
   const [color, setColor] = useState<BoardColor>("white");
   const [sound, setSound] = useState<SoundMode>("watch");
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(40);
+  const [musicVolume, setMusicVolume] = useState(60);
+  const [music, setMusic] = useState<LoFiState>(INITIAL_MUSIC);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -44,8 +56,29 @@ export function Studio({ initialNow }: StudioProps) {
     const city = getCity(DEFAULT_LOCATION_ID);
     return city ?? getCity(DEFAULT_CITIES[1]) ?? getCity(DEFAULT_CITIES[0])!;
   });
+  /** The city picked on the board; the other rows dim while it is set. */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const audioCtx = useRef<AudioContext | null>(null);
+  const lofi = useRef<LoFiEngine | null>(null);
+
+  /* --- lo-fi player ----------------------------------------------------- */
+
+  useEffect(() => {
+    const engine = new LoFiEngine();
+    lofi.current = engine;
+    const unsubscribe = engine.subscribe(setMusic);
+    return () => {
+      unsubscribe();
+      engine.dispose();
+      lofi.current = null;
+    };
+  }, []);
+
+  const handleMusicVolume = useCallback((value: number) => {
+    setMusicVolume(value);
+    lofi.current?.setVolume(value / 100);
+  }, []);
 
   /* --- sound ---------------------------------------------------------- */
 
@@ -61,7 +94,7 @@ export function Studio({ initialNow }: StudioProps) {
         if (!Ctor) return;
         if (!audioCtx.current) audioCtx.current = new Ctor();
         const ctx = audioCtx.current;
-        if (ctx.state === "suspended") void ctx.resume();
+        if (ctx.state === "suspended") void ctx.resume().catch(() => {});
 
         const gainValue = sound === "system" ? 0.16 : (volume / 100) * 0.16;
         const osc = ctx.createOscillator();
@@ -86,7 +119,7 @@ export function Studio({ initialNow }: StudioProps) {
 
   /* --- theme ---------------------------------------------------------- */
 
-  const theme = color === "black" ? "light" : "dark";
+  const theme = color === "charcoal" ? "light" : "dark";
   const palette = useMemo(
     () => BOARD_COLORS.find((c) => c.id === color) ?? BOARD_COLORS[0],
     [color],
@@ -109,6 +142,7 @@ export function Studio({ initialNow }: StudioProps) {
 
   const handlePickCity = useCallback((city: City) => {
     setLocation(city);
+    setSelectedId(city.id);
     setCities((prev) => {
       if (prev.some((c) => c.id === city.id)) {
         // Already on the board — leave the running order untouched.
@@ -121,15 +155,39 @@ export function Studio({ initialNow }: StudioProps) {
     });
   }, []);
 
-  const markers = useMemo<MapMarker[]>(
+  /* --- world map ------------------------------------------------------- */
+
+  const mapMarkers = useMemo<MapMarker[]>(
     () =>
-      cities.map((city) => ({
-        id: city.id,
-        name: city.name,
-        lat: city.lat,
-        lon: city.lon,
+      MAP_CITIES.map((hub) => ({
+        id: hub.id,
+        name: hub.name,
+        lat: hub.lat,
+        lon: hub.lon,
+        time: formatLocalTime12(hub.timeZone, now),
+        day: isDaytime(hub.timeZone, now),
       })),
-    [cities],
+    [now],
+  );
+
+  const handleMapPick = useCallback(
+    (id: string) => {
+      const hub = MAP_CITIES.find((c) => c.id === id);
+      if (!hub) return;
+
+      const city = getCity(hub.id) ?? {
+        id: hub.id,
+        name: hub.name,
+        country: "World",
+        timeZone: hub.timeZone,
+        lat: hub.lat,
+        lon: hub.lon,
+      };
+
+      // Picking a hub on the map selects it and brings it onto the board.
+      handlePickCity(city);
+    },
+    [handlePickCity],
   );
 
   /* --- expanded mode --------------------------------------------------- */
@@ -170,15 +228,10 @@ export function Studio({ initialNow }: StudioProps) {
       return (
         <div className="flex h-full w-full items-center justify-center px-[clamp(12px,3vw,56px)]">
           <WorldMap
-            markers={markers}
+            markers={mapMarkers}
             activeId={location.id}
-            activeColor={litColor}
-            landColor={theme === "light" ? "#c9c9cf" : "#34343a"}
-            onMarkerClick={(id) => {
-              const city = cities.find((c) => c.id === id);
-              if (city) handlePickCity(city);
-            }}
-            className="h-auto w-full"
+            onMarkerClick={handleMapPick}
+            className="w-full md:w-[min(100%,62vw)]"
           />
         </div>
       );
@@ -189,7 +242,7 @@ export function Studio({ initialNow }: StudioProps) {
           <DigitalBoard
             cities={cities}
             now={now}
-            activeId={location.id}
+            activeId={selectedId}
             onSelectCity={handlePickCity}
           />
         </div>
@@ -206,7 +259,7 @@ export function Studio({ initialNow }: StudioProps) {
           <WorldTimeBoard
             cities={cities}
             now={now}
-            activeId={location.id}
+            activeId={selectedId}
             onSelectCity={handlePickCity}
           />
         </motion.div>
@@ -217,12 +270,13 @@ export function Studio({ initialNow }: StudioProps) {
     boardMode,
     cities,
     expanded,
+    handleMapPick,
     handlePickCity,
     litColor,
     location.id,
-    markers,
+    mapMarkers,
     now,
-    theme,
+    selectedId,
   ]);
 
   return (
@@ -285,6 +339,7 @@ export function Studio({ initialNow }: StudioProps) {
         now={now}
         onPickCity={handlePickCity}
         hidden={expanded}
+        preferencesOpen={preferencesOpen}
       />
 
       <PreferencesPanel
@@ -297,9 +352,16 @@ export function Studio({ initialNow }: StudioProps) {
         onSoundChange={setSound}
         volume={volume}
         onVolumeChange={setVolume}
+        musicVolume={musicVolume}
+        onMusicVolumeChange={handleMusicVolume}
+        music={music}
+        onMusicToggle={() => lofi.current?.toggle()}
+        onMusicNext={() => lofi.current?.next()}
+        onMusicPrevious={() => lofi.current?.previous()}
+        onMusicShuffle={() => lofi.current?.toggleShuffle()}
+        onMusicSelect={(index) => lofi.current?.selectTrack(index)}
         onClose={() => setPreferencesOpen(false)}
       />
-
     </div>
   );
 }

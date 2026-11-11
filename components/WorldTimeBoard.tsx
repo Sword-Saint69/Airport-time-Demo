@@ -39,6 +39,9 @@ const DOT_INSET = 0.07;
 const DOT_SIZE = 1 - DOT_INSET * 2;
 const DOT_RADIUS = 0.3;
 
+/** How far a non-selected row is dimmed once a city has been picked. */
+const DIMMED_OPACITY = 0.24;
+
 const PATTERN_ID = "wt-board-dots";
 
 function litDotsFor(text: string, originCol: number) {
@@ -62,12 +65,14 @@ const BoardLine = memo(function BoardLine({
   city,
   rowIndex,
   active,
+  dimmed,
   onSelectCity,
 }: {
   time: string;
   city: City;
   rowIndex: number;
   active: boolean;
+  dimmed: boolean;
   onSelectCity?: (city: City) => void;
 }) {
   const top = rowIndex * ROW_PITCH;
@@ -81,7 +86,13 @@ const BoardLine = memo(function BoardLine({
   const overflow = textColumns(label) > CITY_FIELD_COLS;
 
   return (
-    <g transform={`translate(0 ${top})`}>
+    <g
+      transform={`translate(0 ${top})`}
+      style={{
+        opacity: dimmed ? DIMMED_OPACITY : 1,
+        transition: "opacity 280ms ease",
+      }}
+    >
       <g
         className="wt-row-in"
         style={{ animationDelay: `${rowIndex * 55}ms`, cursor: "pointer" }}
@@ -97,6 +108,16 @@ const BoardLine = memo(function BoardLine({
           }
         }}
       >
+        {/* A transparent hit strip so the whole row is clickable, not just
+            the lit dots. */}
+        <rect
+          x={-1}
+          y={0}
+          width={MATRIX_COLS + 2}
+          height={ROW_PITCH}
+          fill="transparent"
+          pointerEvents="all"
+        />
         <g fill="var(--dot-lit)">
           {timeDots.map((d, i) => (
             <rect
@@ -157,13 +178,22 @@ const BoardLine = memo(function BoardLine({
 export interface WorldTimeBoardProps {
   cities: City[];
   now: Date;
-  activeId?: string;
+  /** id of the selected city; when set, the other rows dim */
+  activeId?: string | null;
   onSelectCity?: (city: City) => void;
 }
 
 /** The LED departure board. */
 export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTimeBoardProps) {
   const height = (MATRIX_ROWS - 1) * ROW_PITCH + GLYPH_H;
+
+  /**
+   * A selection has been made *and* it is on the board, so the other rows
+   * can dim. Selecting a city that is not on the board leaves every row lit.
+   */
+  const hasSelection = Boolean(
+    activeId && cities.some((city) => city.id === activeId),
+  );
 
   const rows = useMemo(
     () =>
@@ -229,16 +259,20 @@ export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTim
         fill={`url(#${PATTERN_ID})`}
       />
 
-      {rows.map(({ city, time }, i) => (
-        <BoardLine
-          key={city.id}
-          time={time}
-          city={city}
-          rowIndex={i}
-          active={city.id === activeId}
-          onSelectCity={onSelectCity}
-        />
-      ))}
+      {rows.map(({ city, time }, i) => {
+        const active = hasSelection && city.id === activeId;
+        return (
+          <BoardLine
+            key={city.id}
+            time={time}
+            city={city}
+            rowIndex={i}
+            active={active}
+            dimmed={hasSelection && !active}
+            onSelectCity={onSelectCity}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -253,18 +287,28 @@ export function DigitalBoard({
   activeId,
   onSelectCity,
 }: WorldTimeBoardProps) {
+  const hasSelection = Boolean(
+    activeId && cities.some((city) => city.id === activeId),
+  );
+
   return (
     <ul className="flex flex-col gap-[0.6em] font-mono text-[clamp(13px,2.1vw,30px)] tabular-nums">
       {cities.map((city) => {
         const time = formatCityClock(city, now);
-        const active = city.id === activeId;
+        const active = hasSelection && city.id === activeId;
+        const dimmed = hasSelection && !active;
         return (
           <li key={city.id}>
             <button
               type="button"
               onClick={() => onSelectCity?.(city)}
-              className={`flex w-full items-baseline gap-[1.1em] rounded-lg px-[0.45em] py-[0.15em] text-left transition-colors ${
-                active ? "text-[var(--fg)]" : "text-[var(--fg-2)] hover:text-[var(--fg)]"
+              aria-current={active ? "true" : undefined}
+              className={`flex w-full items-baseline gap-[1.1em] rounded-lg px-[0.45em] py-[0.15em] text-left transition-all duration-300 ${
+                active
+                  ? "text-[var(--fg)]"
+                  : dimmed
+                    ? "text-[var(--fg)] opacity-25 hover:opacity-70"
+                    : "text-[var(--fg-2)] hover:text-[var(--fg)]"
               }`}
             >
               <span className="w-[4.6em] shrink-0 font-semibold tracking-[0.02em]">{time}</span>

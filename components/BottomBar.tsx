@@ -3,11 +3,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GlassButton } from "@/components/GlassButton";
-import { IconSearch, IconSun } from "@/components/Icons";
+import { IconSearch } from "@/components/Icons";
 import { Segmented } from "@/components/Segmented";
 import type { City } from "@/lib/cities";
 import { searchCities } from "@/lib/cities";
-import { formatShortDate, getGmtOffset } from "@/lib/time";
+import { formatShortDate, getGmtOffset, isDaytime } from "@/lib/time";
 
 export interface BottomBarProps {
   view: "clock" | "map";
@@ -17,6 +17,8 @@ export interface BottomBarProps {
   onPickCity: (city: City) => void;
   /** Hides the bar (expanded presentation mode). */
   hidden?: boolean;
+  /** The preferences drawer is open — the view switch steps aside. */
+  preferencesOpen?: boolean;
 }
 
 export function BottomBar({
@@ -26,6 +28,7 @@ export function BottomBar({
   now,
   onPickCity,
   hidden = false,
+  preferencesOpen = false,
 }: BottomBarProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -63,19 +66,23 @@ export function BottomBar({
       transition={{ duration: 0.3, ease: [0.22, 0.61, 0.36, 1] }}
       className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3 px-[clamp(12px,1.6vw,28px)] pb-[clamp(12px,1.6vw,28px)]"
     >
-      <div className="pointer-events-auto">
-        <Segmented
-          layoutId="bottom-view"
-          size="sm"
-          label="Board view"
-          value={view}
-          onChange={onViewChange}
-          options={[
-            { value: "clock", label: "Clock" },
-            { value: "map", label: "Map" },
-          ]}
-        />
-      </div>
+      {preferencesOpen ? (
+        <div className="pointer-events-auto" />
+      ) : (
+        <div className="pointer-events-auto">
+          <Segmented
+            layoutId="bottom-view"
+            size="sm"
+            label="Board view"
+            value={view}
+            onChange={onViewChange}
+            options={[
+              { value: "clock", label: "Clock" },
+              { value: "map", label: "Map" },
+            ]}
+          />
+        </div>
+      )}
 
       <div className="pointer-events-auto relative flex flex-1 justify-center">
         <AnimatePresence>
@@ -92,6 +99,7 @@ export function BottomBar({
                 <ul className="flex flex-col">
                   {suggestions.map((city) => {
                     const gmt = getGmtOffset(city, now);
+                    const day = isDaytime(city.timeZone, now);
                     return (
                       <li key={city.id}>
                         <button
@@ -99,7 +107,9 @@ export function BottomBar({
                           onClick={() => pick(city)}
                           className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-[var(--glass)]"
                         >
-                          <IconSun size={14} className="shrink-0 text-[var(--fg-3)]" />
+                          <span className="shrink-0 text-[12px]" aria-hidden="true">
+                            {day ? "☀️" : "🌙"}
+                          </span>
                           <span className="truncate text-[13px] font-semibold">{city.name}</span>
                           <span className="truncate text-[12px] text-[var(--fg-2)]">
                             {city.country}

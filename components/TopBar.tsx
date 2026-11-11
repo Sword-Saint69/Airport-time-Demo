@@ -31,29 +31,35 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-[clamp(12px,1.6vw,28px)] pt-[clamp(12px,1.6vw,28px)]">
-      <div className="pointer-events-auto flex flex-col items-start gap-2">
-        <div className="flex items-center gap-2.5">
-          <Segmented
-            layoutId="top-tabs"
-            label="Face"
-            value={tab}
-            onChange={onTabChange}
-            options={[
-              { value: "watch", label: "Watch" },
-              { value: "focus", label: "Focus" },
-              { value: "world", label: "World Time" },
-            ]}
-          />
-          <GlassButton
-            label="System preferences"
-            active={preferencesOpen}
-            onClick={onTogglePreferences}
-          >
-            <IconPalette size={17} />
-          </GlassButton>
+      {preferencesOpen ? (
+        // The drawer covers the top-left corner, so the face switcher and the
+        // palette button step aside while it is open.
+        <div className="pointer-events-auto" />
+      ) : (
+        <div className="pointer-events-auto flex flex-col items-start gap-2">
+          <div className="flex items-center gap-2.5">
+            <Segmented
+              layoutId="top-tabs"
+              label="Face"
+              value={tab}
+              onChange={onTabChange}
+              options={[
+                { value: "watch", label: "Watch" },
+                { value: "focus", label: "Focus" },
+                { value: "world", label: "World Time" },
+              ]}
+            />
+            <GlassButton
+              label="System preferences"
+              active={preferencesOpen}
+              onClick={onTogglePreferences}
+            >
+              <IconPalette size={17} />
+            </GlassButton>
+          </div>
+          {accessory ? <div className="self-end">{accessory}</div> : null}
         </div>
-        {accessory ? <div className="self-end">{accessory}</div> : null}
-      </div>
+      )}
 
       <div className="pointer-events-auto flex items-center gap-2.5">
         <GlassButton label="Close" onClick={onClose}>

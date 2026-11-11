@@ -173,6 +173,33 @@ export function getGmtOffset(city: Pick<City, "timeZone">, date: Date): GmtOffse
   return { minutes, label: formatGmtLabel(minutes) };
 }
 
+/**
+ * "3:16 AM" style 12h clock string for a time zone.
+ *
+ * Used by the map badges, which show the local wall-clock time next to a
+ * day/night glyph.
+ */
+export function formatLocalTime12(
+  timeZone: string,
+  date: Date,
+): string {
+  const parts = readZonedParts(resolveTimeZone(timeZone), date);
+  const hour12 = parts.hour % 12 === 0 ? 12 : parts.hour % 12;
+  const suffix = parts.hour < 12 ? "AM" : "PM";
+  return `${hour12}:${pad2(parts.minute)} ${suffix}`;
+}
+
+/**
+ * Whether it is daylight in a time zone.
+ *
+ * A rough civil-daylight rule: daylight from 06:00 to 18:00 local time.
+ * Good enough to pick a sun or a moon glyph for a map badge.
+ */
+export function isDaytime(timeZone: string, date: Date): boolean {
+  const parts = readZonedParts(resolveTimeZone(timeZone), date);
+  return parts.hour >= 6 && parts.hour < 18;
+}
+
 /** "06:28" style 24h clock string for the city. */
 export function formatCityClock(city: Pick<City, "timeZone">, date: Date): string {
   const time = getCityTime(city, date);
