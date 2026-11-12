@@ -1,4 +1,4 @@
-# World Time — LED Matrix Studio
+# Airport Time — LED Matrix Studio
 
 A pixel-faithful recreation of the Apple Watch **World Time** face, rebuilt for the
 web as a full-screen LED departure board with a dot-matrix world map and a
@@ -6,17 +6,33 @@ web as a full-screen LED departure board with a dot-matrix world map and a
 
 ![board](docs/preview.png)
 
+| | | | |
+| --- | --- | --- | --- |
+| ![world map](docs/map.png) | ![preferences](docs/preferences.png) | ![shortcuts](docs/shortcuts.png) | ![watch](docs/watch.png) |
+| The dot-matrix world map | The SYSTEM PREFERENCES drawer | Keyboard shortcuts | The analog watch face |
+
 Everything you see was reverse-engineered from a 1728×1080 60 fps reference
 recording: the 5×7 dot-matrix font, the exact cell rhythm, the unlit "off" dot
 field, the chrome geometry and the palette were all sampled pixel-by-pixel off
 the source frames rather than eyeballed.
+
+> ### Inspiration
+>
+> The original airport-matrix concept — a departure board that shows the local
+> time of every city so you never miss your flight — comes from
+> [HASSCO© (@itshassco)](https://x.com/itshassco/status/2106761271282737292).
+> This project rebuilds that idea as a working web app, with a real world map,
+> a keyboard-driven interface and a split-flap board.
+>
+> The board itself is modelled on the Apple Watch **World Time** face.
 
 ## Stack
 
 - **Next.js 16** (App Router, React 19.2, TypeScript strict, Turbopack)
 - **Tailwind CSS v4**
 - **framer-motion** for the segmented control, accordions and view transitions
-- **Web Audio API** for the tick/confirm tones and the generative lo-fi player
+- **Web Audio API** for the tick/confirm tones, and an `<audio>` element for
+  the music player
 - `Intl.DateTimeFormat` + IANA time zones for every clock (no hand-rolled maths)
 
 ```bash

@@ -17,7 +17,7 @@ import { TopBar, type StudioTab } from "@/components/TopBar";
 import { DigitalBoard, WorldTimeBoard } from "@/components/WorldTimeBoard";
 import WorldMap, { type MapMarker } from "@/components/WorldMap";
 import { DEFAULT_CITIES, getCity, type City } from "@/lib/cities";
-import { LoFiEngine, type LoFiState } from "@/lib/lofi";
+import { MusicPlayer, type MusicState } from "@/lib/music";
 import { MAP_CITIES } from "@/lib/mapCities";
 import {
   usePersistentState,
@@ -30,11 +30,13 @@ import { useNow } from "@/lib/useNow";
 
 const DEFAULT_LOCATION_ID = "new-york";
 
-const INITIAL_MUSIC: LoFiState = {
+const INITIAL_MUSIC: MusicState = {
   playing: false,
   trackIndex: 0,
   shuffle: false,
   volume: 0.6,
+  position: 0,
+  duration: 0,
 };
 
 export interface StudioProps {
@@ -49,7 +51,7 @@ export function Studio({ initialNow }: StudioProps) {
 
   const [tab, setTab] = useState<StudioTab>("world");
   const [bottomView, setBottomView] = useState<"clock" | "map">("clock");
-  const [music, setMusic] = useState<LoFiState>(INITIAL_MUSIC);
+  const [music, setMusic] = useState<MusicState>(INITIAL_MUSIC);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -57,7 +59,7 @@ export function Studio({ initialNow }: StudioProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const audioCtx = useRef<AudioContext | null>(null);
-  const lofi = useRef<LoFiEngine | null>(null);
+  const player = useRef<MusicPlayer | null>(null);
 
   /* --- persisted state ------------------------------------------------- */
 
@@ -89,20 +91,20 @@ export function Studio({ initialNow }: StudioProps) {
   /* --- lo-fi player ----------------------------------------------------- */
 
   useEffect(() => {
-    const engine = new LoFiEngine();
-    lofi.current = engine;
+    const engine = new MusicPlayer();
+    player.current = engine;
     const unsubscribe = engine.subscribe(setMusic);
     return () => {
       unsubscribe();
       engine.dispose();
-      lofi.current = null;
+      player.current = null;
     };
   }, []);
 
   const handleMusicVolume = useCallback(
     (value: number) => {
       setPref("musicVolume", value);
-      lofi.current?.setVolume(value / 100);
+      player.current?.setVolume(value / 100);
     },
     [setPref],
   );
@@ -317,7 +319,7 @@ export function Studio({ initialNow }: StudioProps) {
         // The search field lives in the bottom bar; ask it to open.
         window.dispatchEvent(new CustomEvent("world-time:search"));
       },
-      onToggleMusic: () => lofi.current?.toggle(),
+      onToggleMusic: () => player.current?.toggle(),
       onShowHelp: () => setShortcutsOpen((v) => !v),
       onEscape: () => {
         if (shortcutsOpen) setShortcutsOpen(false);
@@ -464,11 +466,12 @@ export function Studio({ initialNow }: StudioProps) {
         musicVolume={musicVolume}
         onMusicVolumeChange={handleMusicVolume}
         music={music}
-        onMusicToggle={() => lofi.current?.toggle()}
-        onMusicNext={() => lofi.current?.next()}
-        onMusicPrevious={() => lofi.current?.previous()}
-        onMusicShuffle={() => lofi.current?.toggleShuffle()}
-        onMusicSelect={(index) => lofi.current?.selectTrack(index)}
+        onMusicToggle={() => player.current?.toggle()}
+        onMusicNext={() => player.current?.next()}
+        onMusicPrevious={() => player.current?.previous()}
+        onMusicShuffle={() => player.current?.toggleShuffle()}
+        onMusicSelect={(index) => player.current?.selectTrack(index)}
+        onMusicSeek={(seconds) => player.current?.seek(seconds)}
         hour24={hour24}
         onHour24Change={(next) => setPref("hour24", next)}
         boardLayout={{

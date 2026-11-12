@@ -8,6 +8,7 @@ import {
   IconClockFace,
   IconDotGrid,
   IconDotSquare,
+  IconExternalLink,
   IconLifebuoy,
   IconMinus,
   IconNext,
@@ -20,7 +21,7 @@ import {
   IconSpeaker,
   IconSphere,
 } from "@/components/Icons";
-import { LOFI_TRACKS, type LoFiState } from "@/lib/lofi";
+import { TRACKS, type MusicState } from "@/lib/music";
 import {
   BOARD_COLORS,
   DEFAULT_BOARD_COLOR,
@@ -33,6 +34,9 @@ export type { BoardColor } from "@/lib/theme";
 export { BOARD_COLORS } from "@/lib/theme";
 export type SoundMode = "mute" | "system" | "watch";
 export type BoardMode = "digital" | "fids";
+
+/** Where the studio's projects, and the person behind them, live. */
+const GITHUB_URL = "https://github.com/Sword-Saint69";
 
 const SOUND_MODES: { value: SoundMode; label: string }[] = [
   { value: "mute", label: "Mute" },
@@ -78,6 +82,15 @@ function PillSlider({
   );
 }
 
+/** "1:04" style time readout for the scrubber. */
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const total = Math.floor(seconds);
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  return `${minutes}:${String(rest).padStart(2, "0")}`;
+}
+
 /** The +/- glyph in an accordion header: the plus rotates away as the minus rotates in. */
 function AccordionGlyph({ open }: { open: boolean }) {
   const ease = "cubic-bezier(0.23, 1, 0.32, 1)";
@@ -113,13 +126,15 @@ export interface PreferencesPanelProps {
   /** lo-fi player volume, 0-100 */
   musicVolume: number;
   onMusicVolumeChange: (volume: number) => void;
-  /** current lo-fi player state */
-  music: LoFiState;
+  /** current music player state */
+  music: MusicState;
   onMusicToggle: () => void;
   onMusicNext: () => void;
   onMusicPrevious: () => void;
   onMusicShuffle: () => void;
   onMusicSelect: (index: number) => void;
+  /** Seek to a position in the track, in seconds. */
+  onMusicSeek: (seconds: number) => void;
   /** whether times are shown on a 24-hour clock */
   hour24: boolean;
   onHour24Change: (hour24: boolean) => void;
@@ -152,6 +167,7 @@ export function PreferencesPanel({
   onMusicPrevious,
   onMusicShuffle,
   onMusicSelect,
+  onMusicSeek,
   hour24,
   onHour24Change,
   boardLayout,
@@ -162,7 +178,7 @@ export function PreferencesPanel({
   const [supportOpen, setSupportOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
 
-  const track = LOFI_TRACKS[music.trackIndex] ?? LOFI_TRACKS[0];
+  const track = TRACKS[music.trackIndex] ?? TRACKS[0];
   const reduceMotion = useReducedMotion();
 
   return (
@@ -231,7 +247,7 @@ export function PreferencesPanel({
               </span>
             </button>
 
-            {/* lo-fi player */}
+            {/* the music player */}
             <div className="rounded-xl bg-[#222222] p-3.5">
               <div className="flex items-center gap-3">
                 <div className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-[#2f4574] via-[#1b2743] to-[#0b0f18]">
@@ -239,13 +255,44 @@ export function PreferencesPanel({
                   <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25" />
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#6ea8ff]/25 to-transparent" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium leading-tight text-white">
                     {track.title}
                   </p>
                   <p className="mt-0.5 truncate text-[11px] leading-tight text-[#8a8a8e]">
                     {track.artist}
                   </p>
+
+                  {/* The scrubber. It doubles as the elapsed-time readout. */}
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <span className="w-[30px] shrink-0 text-right font-mono text-[9px] tabular-nums text-[#6a6a6e]">
+                      {formatTime(music.position)}
+                    </span>
+                    <input
+                      id="pref-music-position"
+                      type="range"
+                      min={0}
+                      max={Math.max(1, Math.floor(music.duration))}
+                      step={1}
+                      value={Math.min(
+                        Math.floor(music.position),
+                        Math.max(1, Math.floor(music.duration)),
+                      )}
+                      onChange={(e) => onMusicSeek(Number(e.target.value))}
+                      aria-label="Seek"
+                      className="wt-pill-range h-[10px] flex-1"
+                      style={{
+                        ["--fill" as string]: `${
+                          music.duration > 0
+                            ? (music.position / music.duration) * 100
+                            : 0
+                        }%`,
+                      }}
+                    />
+                    <span className="w-[30px] shrink-0 font-mono text-[9px] tabular-nums text-[#6a6a6e]">
+                      {formatTime(music.duration)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -327,7 +374,7 @@ export function PreferencesPanel({
                     className="overflow-hidden"
                   >
                     <div className="my-3 h-px bg-[#2e2e2e]" />
-                    {LOFI_TRACKS.map((t, i) => (
+                    {TRACKS.map((t, i) => (
                       <motion.li
                         key={t.title}
                         initial={{ opacity: 0, y: 6 }}
@@ -527,12 +574,15 @@ export function PreferencesPanel({
                         Off-Time — Gallery Companion. Recall memories, clean
                         photos.
                       </p>
-                      <button
-                        type="button"
-                        className="wt-press mt-2.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#111113]"
+                      <a
+                        href={GITHUB_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="wt-press mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#111113]"
                       >
                         Get the app
-                      </button>
+                        <IconExternalLink size={11} />
+                      </a>
                     </div>
                   </motion.div>
                 ) : null}
@@ -564,9 +614,20 @@ export function PreferencesPanel({
                     transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     className="overflow-hidden"
                   >
-                    <div className="px-3.5 pb-3.5 text-[11px] leading-snug text-[#8a8a8e]">
-                      Questions, bugs and feature requests — send them to
-                      hello@co.watch and we will get back to you.
+                    <div className="px-3.5 pb-3.5">
+                      <p className="text-[11px] leading-snug text-[#8a8a8e]">
+                        Questions, bugs and feature requests — send them to
+                        hello@co.watch and we will get back to you.
+                      </p>
+                      <a
+                        href={GITHUB_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="wt-press mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#111113]"
+                      >
+                        Open an issue
+                        <IconExternalLink size={11} />
+                      </a>
                     </div>
                   </motion.div>
                 ) : null}

@@ -160,6 +160,17 @@ export function IconX(props: IconProps) {
   );
 }
 
+/** An arrow leaving a box — the "opens in a new tab" mark. */
+export function IconExternalLink(props: IconProps) {
+  return (
+    <svg {...base({ strokeWidth: 1.9, ...props })}>
+      <path d="M13.5 4.5H19.5V10.5" />
+      <path d="M19.5 4.5 11.5 12.5" />
+      <path d="M18 14v4.2a1.3 1.3 0 0 1-1.3 1.3H5.8a1.3 1.3 0 0 1-1.3-1.3V7.3A1.3 1.3 0 0 1 5.8 6H10" />
+    </svg>
+  );
+}
+
 /** A star — the "favourite" mark. */
 export function IconStar(props: IconProps) {
   return (
