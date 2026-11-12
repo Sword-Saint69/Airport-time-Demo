@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // A custom worker that wraps the generated OpenNext handler, so that the
+  // audio can be served with HTTP range support.
+  "main": "./worker.ts",
+  "name": "airport-time-demo",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": [
+    // Enable the Node.js API.
+    "nodejs_compat",
+    // Only allow fetches to public URLs.
+    "global_fetch_strictly_public",
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+    // Let the worker see the audio first, so it can answer range requests.
+    // Everything else keeps the default asset-first behaviour.
+    "run_worker_first": ["/audio/*"],
+    // Next.js only serves public files at their exact path. These are the
+    // values OpenNext requires when the worker runs first.
+    "html_handling": "none",
+    "not_found_handling": "none",
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      // Must match "name" above. The auto-migration derives this from the
+      // package name, which is why it is written out by hand.
+      "service": "airport-time-demo",
+    },
+  ],
+  "images": {
+    "binding": "IMAGES",
+  },
+  "observability": {
+    "enabled": true,
+  },
+}

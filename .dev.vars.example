@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local Cloudflare development.
+# .dev.vars is gitignored - it can hold secrets.
+NEXTJS_ENV=development
