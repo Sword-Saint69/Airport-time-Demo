@@ -26,6 +26,8 @@ the source frames rather than eyeballed.
 >
 > The board itself is modelled on the Apple Watch **World Time** face.
 
+**Source:** [github.com/Sword-Saint69/Airport-time-Demo](https://github.com/Sword-Saint69/Airport-time-Demo)
+
 ## Stack
 
 - **Next.js 16** (App Router, React 19.2, TypeScript strict, Turbopack)
@@ -46,6 +48,20 @@ npm run typecheck
 > directories (`.next/dev` and `.next`), so you can keep the dev server
 > running while you build. If you ever see a stale asset 404 in the console,
 > restart the dev server.
+
+## Feature checklist
+
+- [x] LED dot-matrix departure board with a pixel-sampled 5×7 font
+- [x] Split-flap characters that turn over when the minute changes
+- [x] Dot-matrix world map with 20 hubs and live day/night badges
+- [x] Three faces: the board, an analog watch and a focus timer
+- [x] A `SYSTEM PREFERENCES` drawer: theme, sound, board layout, favourites
+- [x] Keyboard-driven — `?` lists the shortcuts
+- [x] Preferences that survive a reload
+- [x] A 12- or 24-hour clock
+- [x] Starred cities, a reorderable board and a searchable catalogue
+- [x] Error boundaries that render in the app's own visual language
+- [x] An installable web app with an icon and a manifest
 
 ## What's in it
 
