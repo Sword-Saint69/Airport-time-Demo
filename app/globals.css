@@ -335,6 +335,85 @@
   animation: wt-row-in 380ms var(--ease-out) both;
 }
 
+/* --- Split-flap -------------------------------------------------------- */
+
+/*
+ * A departure board flips a character in two halves. Each half is its own
+ * group with `transform-box: fill-box`, and a transparent pad rectangle
+ * pins the group's fill box to the half-cell so the hinge always lands on
+ * the split line — for every glyph, every time.
+ */
+.wt-flap {
+  transform-box: fill-box;
+}
+
+/* The top half hinges on the bottom edge of its box, the bottom half on
+   the top edge — both of which the pad rect puts at the split line. */
+.wt-flap-top {
+  transform-origin: bottom;
+}
+
+.wt-flap-bottom {
+  transform-origin: top;
+}
+
+@keyframes wt-flap-fold {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes wt-flap-unfold {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/*
+ * The outgoing half falls: it accelerates, the way a flap does.
+ *
+ * `--flap-delay` is the per-character stagger, so the characters flip in
+ * sequence from left to right, like a real board. The four offsets inside
+ * each character are what give the flap its two-beat rhythm: the top half
+ * goes first, and the bottom half follows a moment later.
+ */
+.wt-flap-collapse-top {
+  animation: wt-flap-fold 140ms cubic-bezier(0.55, 0, 0.9, 0.6) both;
+  animation-delay: var(--flap-delay, 0ms);
+}
+
+.wt-flap-collapse-bottom {
+  animation: wt-flap-fold 140ms cubic-bezier(0.55, 0, 0.9, 0.6) both;
+  animation-delay: calc(var(--flap-delay, 0ms) + 160ms);
+}
+
+/* The incoming half unfolds into place just behind it. */
+.wt-flap-reveal-top {
+  animation: wt-flap-unfold 170ms cubic-bezier(0.15, 0.6, 0.35, 1) both;
+  animation-delay: calc(var(--flap-delay, 0ms) + 90ms);
+}
+
+.wt-flap-reveal-bottom {
+  animation: wt-flap-unfold 170ms cubic-bezier(0.15, 0.6, 0.35, 1) both;
+  animation-delay: calc(var(--flap-delay, 0ms) + 250ms);
+}
+
+/* Reduced motion: the board swaps the character instantly instead. */
+@media (prefers-reduced-motion: reduce) {
+  .wt-flap-collapse-top,
+  .wt-flap-collapse-bottom,
+  .wt-flap-reveal-top,
+  .wt-flap-reveal-bottom {
+    animation: none;
+  }
+}
+
 /* --- Board rows -------------------------------------------------------- */
 
 /*

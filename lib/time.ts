@@ -190,6 +190,47 @@ export function formatLocalTime12(
 }
 
 /**
+ * "15:16" style 24h clock string for a time zone.
+ *
+ * The mirror image of {@link formatLocalTime12}, for users who read a
+ * 24-hour clock.
+ */
+export function formatLocalTime24(
+  timeZone: string,
+  date: Date,
+): string {
+  const parts = readZonedParts(resolveTimeZone(timeZone), date);
+  return `${pad2(parts.hour)}:${pad2(parts.minute)}`;
+}
+
+/**
+ * The local time of a time zone, on either a 12- or a 24-hour clock.
+ */
+export function formatLocalTime(
+  timeZone: string,
+  date: Date,
+  hour24: boolean,
+): string {
+  return hour24
+    ? formatLocalTime24(timeZone, date)
+    : formatLocalTime12(timeZone, date);
+}
+
+/**
+ * "3:16 PM" / "15:16" for the board rows.
+ *
+ * The board shows one clock per row, and the user can switch the whole app
+ * between the two conventions.
+ */
+export function formatBoardTime(
+  timeZone: string,
+  date: Date,
+  hour24: boolean,
+): string {
+  return formatLocalTime(timeZone, date, hour24);
+}
+
+/**
  * Whether it is daylight in a time zone.
  *
  * A rough civil-daylight rule: daylight from 06:00 to 18:00 local time.

@@ -53,6 +53,17 @@ export function BottomBar({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  /**
+   * The `/` shortcut asks the bar to open from the outside. A custom
+   * event keeps the search state local to the bar while still letting the
+   * keyboard open it.
+   */
+  useEffect(() => {
+    const onRequest = () => setOpen(true);
+    window.addEventListener("world-time:search", onRequest);
+    return () => window.removeEventListener("world-time:search", onRequest);
+  }, []);
+
   const pick = (city: City) => {
     onPickCity(city);
     setQuery("");

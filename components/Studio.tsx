@@ -12,13 +12,20 @@ import {
   type BoardMode,
   type SoundMode,
 } from "@/components/PreferencesPanel";
+import { ShortcutSheet } from "@/components/ShortcutSheet";
 import { TopBar, type StudioTab } from "@/components/TopBar";
 import { DigitalBoard, WorldTimeBoard } from "@/components/WorldTimeBoard";
 import WorldMap, { type MapMarker } from "@/components/WorldMap";
 import { DEFAULT_CITIES, getCity, type City } from "@/lib/cities";
 import { LoFiEngine, type LoFiState } from "@/lib/lofi";
 import { MAP_CITIES } from "@/lib/mapCities";
-import { formatLocalTime12, isDaytime } from "@/lib/time";
+import {
+  usePersistentState,
+  type Preferences,
+} from "@/lib/preferences";
+import { formatLocalTime, isDaytime } from "@/lib/time";
+import { useCities } from "@/lib/useCities";
+import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useNow } from "@/lib/useNow";
 
 const DEFAULT_LOCATION_ID = "new-york";
@@ -38,29 +45,46 @@ export interface StudioProps {
 export function Studio({ initialNow }: StudioProps) {
   const now = useNow(initialNow);
 
+  const { prefs, hydrated, setPref, patch } = usePersistentState();
+
   const [tab, setTab] = useState<StudioTab>("world");
   const [bottomView, setBottomView] = useState<"clock" | "map">("clock");
-  const [boardMode, setBoardMode] = useState<BoardMode>("fids");
-  const [color, setColor] = useState<BoardColor>("white");
-  const [sound, setSound] = useState<SoundMode>("watch");
-  const [volume, setVolume] = useState(40);
-  const [musicVolume, setMusicVolume] = useState(60);
   const [music, setMusic] = useState<LoFiState>(INITIAL_MUSIC);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  const [cities, setCities] = useState<City[]>(() =>
-    DEFAULT_CITIES.map((id) => getCity(id)).filter((c): c is City => Boolean(c)),
-  );
-  const [location, setLocation] = useState<City>(() => {
-    const city = getCity(DEFAULT_LOCATION_ID);
-    return city ?? getCity(DEFAULT_CITIES[1]) ?? getCity(DEFAULT_CITIES[0])!;
-  });
-  /** The city picked on the board; the other rows dim while it is set. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const audioCtx = useRef<AudioContext | null>(null);
   const lofi = useRef<LoFiEngine | null>(null);
+
+  /* --- persisted state ------------------------------------------------- */
+
+  const color = prefs.color;
+  const boardMode = prefs.boardMode;
+  const sound = prefs.sound;
+  const volume = prefs.volume;
+  const musicVolume = prefs.musicVolume;
+  const hour24 = prefs.hour24;
+
+  const [location, setLocation] = useState<City>(() => {
+    const city = getCity(DEFAULT_LOCATION_ID);
+    return city ?? getCity(DEFAULT_CITIES[1]) ?? getCity(DEFAULT_CITIES[0])!;
+  });
+
+  /**
+   * The stored preferences are applied once the first render has happened.
+   * Applying them during the render itself would desynchronise the server
+   * markup from the client tree.
+   */
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!hydrated || restored.current) return;
+    restored.current = true;
+    const city = getCity(prefs.locationCityId);
+    if (city) setLocation(city);
+  }, [hydrated, prefs.locationCityId]);
 
   /* --- lo-fi player ----------------------------------------------------- */
 
@@ -75,10 +99,13 @@ export function Studio({ initialNow }: StudioProps) {
     };
   }, []);
 
-  const handleMusicVolume = useCallback((value: number) => {
-    setMusicVolume(value);
-    lofi.current?.setVolume(value / 100);
-  }, []);
+  const handleMusicVolume = useCallback(
+    (value: number) => {
+      setPref("musicVolume", value);
+      lofi.current?.setVolume(value / 100);
+    },
+    [setPref],
+  );
 
   /* --- sound ---------------------------------------------------------- */
 
@@ -143,22 +170,30 @@ export function Studio({ initialNow }: StudioProps) {
   const litColor = palette.value;
   const dimColor = palette.dim;
 
-  /* --- world time board ------------------------------------------------ */
+  /* --- board cities --------------------------------------------------- */
 
-  const handlePickCity = useCallback((city: City) => {
-    setLocation(city);
-    setSelectedId(city.id);
-    setCities((prev) => {
-      if (prev.some((c) => c.id === city.id)) {
-        // Already on the board — leave the running order untouched.
-        return prev;
-      }
+  const cityState = useCities(
+    prefs.boardCityIds,
+    prefs.favouriteCityIds,
+    useCallback((ids: string[]) => setPref("boardCityIds", ids), [setPref]),
+    useCallback(
+      (ids: string[]) => setPref("favouriteCityIds", ids),
+      [setPref],
+    ),
+  );
+
+  const board = cityState.board;
+
+  const handlePickCity = useCallback(
+    (city: City) => {
+      setLocation(city);
+      setSelectedId(city.id);
+      setPref("locationCityId", city.id);
       // A newly picked city takes the last slot, exactly like the reference.
-      const next = [...prev];
-      next[next.length - 1] = city;
-      return next;
-    });
-  }, []);
+      cityState.putOnBoard(city.id);
+    },
+    [cityState, setPref],
+  );
 
   /* --- world map ------------------------------------------------------- */
 
@@ -169,10 +204,10 @@ export function Studio({ initialNow }: StudioProps) {
         name: hub.name,
         lat: hub.lat,
         lon: hub.lon,
-        time: formatLocalTime12(hub.timeZone, now),
+        time: formatLocalTime(hub.timeZone, now, hour24),
         day: isDaytime(hub.timeZone, now),
       })),
-    [now],
+    [now, hour24],
   );
 
   const handleMapPick = useCallback(
@@ -236,16 +271,66 @@ export function Studio({ initialNow }: StudioProps) {
 
   /* --- keyboard -------------------------------------------------------- */
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (preferencesOpen) setPreferencesOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [preferencesOpen]);
+  /**
+   * Move the selection to a board row. Rows are addressed by index, and
+   * picking one both selects it and sends it to the top of the board.
+   */
+  const pickRow = useCallback(
+    (index: number) => {
+      const city = board[index];
+      if (!city) return;
+      handlePickCity(city);
+      setBottomView("clock");
+      setTab("world");
+    },
+    [board, handlePickCity],
+  );
 
-  const board = useMemo(() => {
+  const stepRow = useCallback(
+    (delta: number) => {
+      if (board.length === 0) return;
+      const current = board.findIndex((c) => c.id === location.id);
+      const next =
+        current === -1
+          ? 0
+          : (current + delta + board.length) % board.length;
+      const city = board[next];
+      if (city) handlePickCity(city);
+    },
+    [board, location.id, handlePickCity],
+  );
+
+  const shortcutHandlers = useMemo(
+    () => ({
+      onPickRow: pickRow,
+      onStep: stepRow,
+      onToggleMap: () => {
+        setBottomView((v) => (v === "map" ? "clock" : "map"));
+        setTab("world");
+      },
+      onFocusView: () => setTab("focus"),
+      onWatchView: () => setTab("watch"),
+      onWorldView: () => setTab("world"),
+      onSearch: () => {
+        setTab("world");
+        setBottomView("clock");
+        // The search field lives in the bottom bar; ask it to open.
+        window.dispatchEvent(new CustomEvent("world-time:search"));
+      },
+      onToggleMusic: () => lofi.current?.toggle(),
+      onShowHelp: () => setShortcutsOpen((v) => !v),
+      onEscape: () => {
+        if (shortcutsOpen) setShortcutsOpen(false);
+        else if (preferencesOpen) setPreferencesOpen(false);
+        else setSelectedId(null);
+      },
+    }),
+    [pickRow, stepRow, shortcutsOpen, preferencesOpen],
+  );
+
+  useKeyboardShortcuts(shortcutHandlers);
+
+  const boardView = useMemo(() => {
     if (bottomView === "map") {
       return (
         <div className="flex h-full w-full items-center justify-center px-[clamp(12px,3vw,56px)]">
@@ -262,8 +347,9 @@ export function Studio({ initialNow }: StudioProps) {
       return (
         <div className="flex h-full w-full items-center justify-center px-[clamp(12px,3vw,56px)]">
           <DigitalBoard
-            cities={cities}
+            cities={board}
             now={now}
+            hour24={hour24}
             activeId={selectedId}
             onSelectCity={handlePickCity}
           />
@@ -279,7 +365,7 @@ export function Studio({ initialNow }: StudioProps) {
           style={{ ["--dot-lit" as string]: litColor }}
         >
           <WorldTimeBoard
-            cities={cities}
+            cities={board}
             now={now}
             activeId={selectedId}
             onSelectCity={handlePickCity}
@@ -290,10 +376,11 @@ export function Studio({ initialNow }: StudioProps) {
   }, [
     bottomView,
     boardMode,
-    cities,
+    board,
     expanded,
     handleMapPick,
     handlePickCity,
+    hour24,
     litColor,
     location.id,
     mapMarkers,
@@ -348,7 +435,7 @@ export function Studio({ initialNow }: StudioProps) {
             ) : tab === "focus" ? (
               <FocusView onSound={playTone} />
             ) : (
-              board
+              boardView
             )}
           </motion.div>
         </AnimatePresence>
@@ -367,13 +454,13 @@ export function Studio({ initialNow }: StudioProps) {
       <PreferencesPanel
         open={preferencesOpen}
         boardMode={boardMode}
-        onBoardModeChange={setBoardMode}
+        onBoardModeChange={(mode) => setPref("boardMode", mode)}
         color={color}
-        onColorChange={setColor}
+        onColorChange={(next) => setPref("color", next)}
         sound={sound}
-        onSoundChange={setSound}
+        onSoundChange={(next) => setPref("sound", next)}
         volume={volume}
-        onVolumeChange={setVolume}
+        onVolumeChange={(next) => setPref("volume", next)}
         musicVolume={musicVolume}
         onMusicVolumeChange={handleMusicVolume}
         music={music}
@@ -382,7 +469,24 @@ export function Studio({ initialNow }: StudioProps) {
         onMusicPrevious={() => lofi.current?.previous()}
         onMusicShuffle={() => lofi.current?.toggleShuffle()}
         onMusicSelect={(index) => lofi.current?.selectTrack(index)}
+        hour24={hour24}
+        onHour24Change={(next) => setPref("hour24", next)}
+        boardLayout={{
+          board: cityState.board,
+          favourites: cityState.favourites,
+          isFavourite: cityState.isFavourite,
+          onToggleFavourite: cityState.toggleFavourite,
+          onAddCity: cityState.putOnBoard,
+          onMoveRow: cityState.moveBoardRow,
+          onRemoveRow: cityState.removeBoardRow,
+          onSearch: cityState.search,
+        }}
         onClose={() => setPreferencesOpen(false)}
+      />
+
+      <ShortcutSheet
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
       />
     </div>
   );

@@ -110,17 +110,89 @@ so nothing is silently swallowed, and keeps them out of the overlay. Genuine
 application errors are left completely alone — they still reach React's error
 boundary and the dev overlay exactly as they should.
 
+`app/error.tsx` and `app/global-error.tsx` are the two error boundaries. The
+route boundary renders its fallback in the app's own dot-matrix language — an
+"ERROR / TRY AGAIN" panel with a retry that re-renders the segment — so a
+failure looks like the board going out of order rather than a blank white
+page. The global boundary covers failures in the root layout itself and
+renders its own document, as the framework requires.
+
+## Preferences
+
+Everything the user can change — the palette, the board rendering, the sound
+mode and volumes, the 24-hour clock, the board's city list, the starred
+cities and the current location — lives in one object that is mirrored into
+`localStorage` by `lib/preferences.ts`.
+
+Two details matter:
+
+- **The stored copy is read after the first render, never during it.** The
+  page is server-rendered per request, so reading `localStorage` in the
+  render would desynchronise the server markup from the client tree. The
+  first paint always uses the defaults; the stored values are applied in an
+  effect right after hydration.
+- **Every field is validated on the way back in.** Storage is user-editable
+  and survives across deploys, so a corrupt or outdated value falls back to
+  its default rather than crashing the app.
+
+The palette is additionally applied by a tiny inline script in the document
+head, so a returning visitor never sees a flash of the default theme before
+React hydrates.
+
+## Keyboard shortcuts
+
+The board is a tool you leave running, so it is drivable without the mouse.
+Press `?` for the list.
+
+| Key | Action |
+| --- | --- |
+| `1` – `5` | Pick the city in that board row |
+| `↑` `↓` | Step through the board |
+| `M` | Toggle the world map |
+| `W` `F` `T` | Watch face / focus timer / world time board |
+| `/` | Search for a city |
+| `Space` | Play or pause the music |
+| `Esc` | Close whatever is open |
+| `?` | Show the shortcut list |
+
+Shortcuts never fire while the user is typing in a field, and never hijack a
+modifier combination the browser or the OS owns.
+
+## The split-flap
+
+The clock field flips like a mechanical board: each character is split into a
+top and a bottom half, the top half falls away, and the new character
+unfolds behind it.
+
+The whole effect rests on one detail — the pivot. Each half is its own `<g>`
+with `transform-box: fill-box`, and a transparent pad rectangle pins the
+group's fill box to the half-cell. Without it the hinge would sit on
+whichever dots happened to be lit, and the flip would wobble from glyph to
+glyph. With it, both halves hinge on exactly the split line, which is
+verified by measuring the rendered geometry as the animation runs.
+
+The characters flip in sequence, and the stagger is relative to the first
+character that changed rather than to its position in the string — so when
+only the minute digit rolls over, it flips immediately instead of waiting.
+
 ## Layout
 
 ```
 app/
   globals.css        design tokens, theme palettes, animations
-  layout.tsx         fonts + metadata
+  layout.tsx         fonts, metadata, the inline guard + theme boot
   page.tsx
+  error.tsx          the route error boundary (dot-matrix fallback)
+  global-error.tsx   the root error boundary
+  manifest.ts        the web app manifest
+  icon.svg / favicon.ico / apple-icon.png
 components/
-  Studio.tsx         state, theme, sound, layout
+  Studio.tsx         state, theme, sound, layout, shortcuts
   WorldTimeBoard.tsx the LED board + the digital rendering
+  FlapChar.tsx       one split-flap character
   WorldMap.tsx       the dot-matrix world map and its badges
+  BoardLayout.tsx    the board's city list and the favourites
+  ShortcutSheet.tsx  the keyboard shortcut list
   DotMatrix.tsx      dot text + dot field primitives
   AnalogWatch.tsx    the watch face
   FocusView.tsx      the focus timer
@@ -131,6 +203,10 @@ lib/
   cities.ts          227 cities with IANA zones and coordinates
   mapCities.ts       the twenty hubs shown on the map
   time.ts            timezone maths, GMT labels, formatting
+  theme.ts           the board palettes
+  preferences.ts     the persisted preferences and their validation
+  useCities.ts       favourites and the board layout
+  useKeyboardShortcuts.ts
   worldmap.ts        the 150x75 land bitmap
   lofi.ts            the generative lo-fi engine
   useNow.ts          a clock that re-aligns to the wall clock every second
@@ -157,47 +233,43 @@ building.
    high-contrast one, the way real FIDS boards do.
 2. **Per-row status colours.** Blue for "boarding", amber for "delayed",
    red for "cancelled" — with a legend in the drawer.
-3. **Flap / split-flap animation.** Rows could flip character by character when
-   the minute changes, the way a mechanical board does.
-4. **Configurable row count.** Let the board show 3, 5 or 8 cities depending on
+3. **Configurable row count.** Let the board show 3, 5 or 8 cities depending on
    the viewport instead of always filling five rows.
-5. **A live seconds column**, blinking on the beat, for people who want the
+4. **A live seconds column**, blinking on the beat, for people who want the
    precision.
 
 **Map**
 
-6. **Sun-path overlay.** A terminator line across the map so you can see where
+5. **Sun-path overlay.** A terminator line across the map so you can see where
    it is night right now, instead of only inferring it from each badge.
-7. **Zoom and pan.** Pinch or scroll to zoom into a region; the badges would
+6. **Zoom and pan.** Pinch or scroll to zoom into a region; the badges would
    declutter as you zoom in.
-8. **Timezone bands.** Fill the map with subtle colour bands for each UTC
+7. **Timezone bands.** Fill the map with subtle colour bands for each UTC
    offset, so the whole world's rhythm reads at a glance.
-9. **A bigger land dataset.** Swap Natural Earth 50m for 10m at higher zoom
+8. **A bigger land dataset.** Swap Natural Earth 50m for 10m at higher zoom
    levels, and render the coastline as a real polyline rather than dots.
 
 **Preferences drawer**
 
-10. **A real clock-face picker.** Right now the Clock Face card toggles
-    Digital/FIDS; it could offer a gallery of faces instead.
-11. **Per-city custom layouts.** Let a city be pinned to a board slot, given a
+9. **A real clock-face picker.** Right now the Clock Face card toggles
+   Digital/FIDS; it could offer a gallery of faces instead.
+10. **Per-city custom layouts.** Let a city be pinned to a board slot, given a
     nickname, or reordered.
-12. **Persist the drawer state** — theme, sound mode, volumes and the lo-fi
-    track — to `localStorage` so the app comes back the way you left it.
-13. **More lo-fi tracks**, plus an equaliser and a sleep timer.
-14. **An appearance section** for the chrome itself — the drawer's colours,
+11. **More lo-fi tracks**, plus an equaliser and a sleep timer.
+12. **An appearance section** for the chrome itself — the drawer's colours,
     the corner radius, the density of the layout.
 
 **Product**
 
-15. **A watch face for the real thing.** The same board, the same font, running
+13. **A watch face for the real thing.** The same board, the same font, running
     as a watchOS complication or a standalone watch app.
-16. **Alerts.** A city can be starred and the app can notify you when it is
+14. **Alerts.** A city can be starred and the app can notify you when it is
     midnight there, or when a saved flight lands.
-17. **Fullscreen "signage" mode.** A kiosk-friendly layout with no chrome at
+15. **Fullscreen "signage" mode.** A kiosk-friendly layout with no chrome at
     all, driven by a URL parameter, for a lobby screen.
-18. **Offline support.** A service worker so the board keeps ticking with no
+16. **Offline support.** A service worker so the board keeps ticking with no
     network.
-19. **More cities.** The catalogue has 227; the world's capitals and time-zone
+17. **More cities.** The catalogue has 227; the world's capitals and time-zone
     capitals are still missing.
-20. **Shareable board snapshots.** Render the current board to a PNG so it can
+18. **Shareable board snapshots.** Render the current board to a PNG so it can
     be posted.

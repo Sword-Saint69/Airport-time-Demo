@@ -2,7 +2,9 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
+import { BoardLayout } from "@/components/BoardLayout";
 import {
+  IconClock24,
   IconClockFace,
   IconDotGrid,
   IconDotSquare,
@@ -19,26 +21,16 @@ import {
   IconSphere,
 } from "@/components/Icons";
 import { LOFI_TRACKS, type LoFiState } from "@/lib/lofi";
+import {
+  BOARD_COLORS,
+  DEFAULT_BOARD_COLOR,
+  paletteFor,
+  themeFor,
+  type BoardColor,
+} from "@/lib/theme";
 
-export type BoardColor = "lime" | "yellow" | "white" | "charcoal" | "ice";
-
-export const BOARD_COLORS: {
-  id: BoardColor;
-  label: string;
-  /** colour of the lit dots */
-  value: string;
-  /** colour of the unlit dots */
-  dim: string;
-  /** canvas background behind the board */
-  bg: string;
-}[] = [
-  { id: "lime", label: "Pastel Lime", value: "#d8f582", dim: "#272a21", bg: "#151613" },
-  { id: "yellow", label: "Warm Yellow", value: "#fae27c", dim: "#33301f", bg: "#1a1712" },
-  { id: "white", label: "White", value: "#ffffff", dim: "#2e2e33", bg: "#0f0f11" },
-  { id: "charcoal", label: "Dark Charcoal", value: "#262626", dim: "#d6d6da", bg: "#ececed" },
-  { id: "ice", label: "Ice Blue", value: "#cce0ff", dim: "#232a33", bg: "#12151a" },
-];
-
+export type { BoardColor } from "@/lib/theme";
+export { BOARD_COLORS } from "@/lib/theme";
 export type SoundMode = "mute" | "system" | "watch";
 export type BoardMode = "digital" | "fids";
 
@@ -128,6 +120,11 @@ export interface PreferencesPanelProps {
   onMusicPrevious: () => void;
   onMusicShuffle: () => void;
   onMusicSelect: (index: number) => void;
+  /** whether times are shown on a 24-hour clock */
+  hour24: boolean;
+  onHour24Change: (hour24: boolean) => void;
+  /** the board layout editor */
+  boardLayout: React.ComponentProps<typeof BoardLayout>;
   onClose: () => void;
 }
 
@@ -155,6 +152,9 @@ export function PreferencesPanel({
   onMusicPrevious,
   onMusicShuffle,
   onMusicSelect,
+  hour24,
+  onHour24Change,
+  boardLayout,
   onClose,
 }: PreferencesPanelProps) {
   const [soundOpen, setSoundOpen] = useState(false);
@@ -392,6 +392,34 @@ export function PreferencesPanel({
                 );
               })}
             </div>
+
+            {/* 24-hour clock */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={hour24}
+              onClick={() => onHour24Change(!hour24)}
+              className="wt-press mt-1 flex w-full items-center gap-2.5 rounded-xl bg-[#222222] px-3.5 py-2.5 text-left transition-colors duration-200 hover:bg-[#262626]"
+            >
+              <IconClock24 size={15} className="shrink-0 text-[#9a9a9a]" />
+              <span className="min-w-0 flex-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#c9c9cc]">
+                24-Hour Clock
+              </span>
+              <span
+                className={`relative h-[18px] w-8 shrink-0 rounded-full transition-colors duration-200 ${
+                  hour24 ? "bg-[#1d7dfa]" : "bg-[#333338]"
+                }`}
+              >
+                <span
+                  className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                    hour24 ? "translate-x-[16px]" : "translate-x-[2px]"
+                  }`}
+                />
+              </span>
+            </button>
+
+            {/* board cities */}
+            <BoardLayout {...boardLayout} />
 
             {/* sound system */}
             <section className="rounded-xl border border-[#262626]">

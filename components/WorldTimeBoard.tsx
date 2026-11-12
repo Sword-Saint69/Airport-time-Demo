@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
   CELL_ADVANCE,
   GLYPH_H,
@@ -9,8 +9,9 @@ import {
   textAdvance,
   textColumns,
 } from "@/lib/dotFont";
+import { FLAP_STAGGER, FlapChar } from "@/components/FlapChar";
 import type { City } from "@/lib/cities";
-import { formatCityClock } from "@/lib/time";
+import { formatBoardTime, formatCityClock } from "@/lib/time";
 
 /* -------------------------------------------------------------------------
  * Board geometry, expressed in "matrix units" (one unit = one dot pitch).
@@ -56,6 +57,58 @@ function litDotsFor(text: string, originCol: number) {
   return out;
 }
 
+/**
+ * The clock field, rendered as split-flap characters.
+ *
+ * Each character is its own cell so it can flip independently when the
+ * minute rolls over — the way a mechanical board does.
+ *
+ * The stagger is relative to the first character that changed, not to its
+ * position in the string: when only the minute digit rolls over, it flips
+ * immediately, and the rest of the field does not wait for it.
+ */
+const FlapTime = memo(function FlapTime({
+  time,
+  originCol,
+}: {
+  time: string;
+  originCol: number;
+}) {
+  const previous = useRef(time);
+  const [rank, setRank] = useState<number[]>([]);
+
+  // Adjusting state during render means the flip starts on the very first
+  // paint of the new time — there is no frame where the new glyph is
+  // already visible before it flips.
+  if (previous.current !== time) {
+    const before = previous.current;
+    previous.current = time;
+
+    const changed: number[] = [];
+    const length = Math.max(before.length, time.length);
+    for (let i = 0; i < length; i += 1) {
+      if (before[i] !== time[i]) changed.push(i);
+    }
+    setRank(changed);
+  }
+
+  return (
+    <g>
+      {time.split("").map((ch, i) => {
+        const at = rank.indexOf(i);
+        return (
+          <g key={i} transform={`translate(${originCol + i * CELL_ADVANCE} 0)`}>
+            <FlapChar
+              char={ch}
+              delay={at === -1 ? 0 : at * FLAP_STAGGER}
+            />
+          </g>
+        );
+      })}
+    </g>
+  );
+});
+
 /** A single line of the board (clock + city name). */
 const BoardLine = memo(function BoardLine({
   time,
@@ -75,7 +128,6 @@ const BoardLine = memo(function BoardLine({
   const top = rowIndex * ROW_PITCH;
 
   const label = city.name.toUpperCase();
-  const timeDots = useMemo(() => litDotsFor(time, TIME_COL), [time]);
   const cityDots = useMemo(() => litDotsFor(label, CITY_COL), [label]);
 
   /** Full advance of the name, used as the marquee copy pitch. */
@@ -114,18 +166,7 @@ const BoardLine = memo(function BoardLine({
           fill="transparent"
           pointerEvents="all"
         />
-        <g fill="var(--dot-lit)">
-          {timeDots.map((d, i) => (
-            <rect
-              key={`t${i}`}
-              x={d.x + DOT_INSET}
-              y={d.y + DOT_INSET}
-              width={DOT_SIZE}
-              height={DOT_SIZE}
-              rx={DOT_RADIUS}
-            />
-          ))}
-        </g>
+        <FlapTime time={time} originCol={TIME_COL} />
 
         {overflow ? (
           <g clipPath="url(#wt-city-clip)">
@@ -176,6 +217,8 @@ export interface WorldTimeBoardProps {
   now: Date;
   /** id of the selected city; when set, the other rows dim */
   activeId?: string | null;
+  /** whether times are shown on a 24-hour clock (digital rendering only) */
+  hour24?: boolean;
   onSelectCity?: (city: City) => void;
 }
 
@@ -280,6 +323,7 @@ export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTim
 export function DigitalBoard({
   cities,
   now,
+  hour24 = false,
   activeId,
   onSelectCity,
 }: WorldTimeBoardProps) {
@@ -290,7 +334,7 @@ export function DigitalBoard({
   return (
     <ul className="flex flex-col gap-[0.6em] font-mono text-[clamp(13px,2.1vw,30px)] tabular-nums">
       {cities.map((city) => {
-        const time = formatCityClock(city, now);
+        const time = formatBoardTime(city.timeZone, now, hour24);
         const active = hasSelection && city.id === activeId;
         return (
           <li key={city.id}>
@@ -302,8 +346,18 @@ export function DigitalBoard({
                 active ? "opacity-100" : "opacity-45"
               }`}
             >
-              <span className="w-[4.6em] shrink-0 font-semibold tracking-[0.02em]">{time}</span>
-              <span className="truncate font-medium tracking-[0.16em]">{city.name.toUpperCase()}</span>
+              {/* The 12-hour clock needs a wider column: "11:54 PM" is
+                  longer than "23:54", and the row must not wrap. */}
+              <span
+                className={`shrink-0 whitespace-nowrap font-semibold tracking-[0.02em] ${
+                  hour24 ? "w-[4.6em]" : "w-[6.4em]"
+                }`}
+              >
+                {time}
+              </span>
+              <span className="truncate font-medium tracking-[0.16em]">
+                {city.name.toUpperCase()}
+              </span>
             </button>
           </li>
         );

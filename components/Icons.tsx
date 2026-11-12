@@ -151,6 +151,71 @@ export function IconLifebuoy(props: IconProps) {
   );
 }
 
+/** A close cross — the "remove" control. */
+export function IconX(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </svg>
+  );
+}
+
+/** A star — the "favourite" mark. */
+export function IconStar(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m12 4 2.5 5.2 5.5.8-4 3.9 1 5.6-5-2.7-5 2.7 1-5.6-4-3.9 5.5-.8Z" />
+    </svg>
+  );
+}
+
+/** A filled star — the "favourited" state. */
+export function IconStarFilled(props: IconProps) {
+  return (
+    <svg {...base({ strokeWidth: 0, ...props })} fill="currentColor">
+      <path d="m12 3.4 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z" />
+    </svg>
+  );
+}
+
+/** A chevron pointing up — the "move row up" control. */
+export function IconChevronUp(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m6.5 14.5 5.5-5.5 5.5 5.5" />
+    </svg>
+  );
+}
+
+/** A chevron pointing down — the "move row down" control. */
+export function IconChevronDown(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m6.5 9.5 5.5 5.5 5.5-5.5" />
+    </svg>
+  );
+}
+
+/** An "A" / "24" mark for the 24-hour clock toggle. */
+export function IconClock24(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="8.4" />
+      <path d="M12 7.2V12l3.4 2.2" />
+    </svg>
+  );
+}
+
+/** A keyboard — the shortcut hint mark. */
+export function IconKeyboard(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.8" y="6" width="18.4" height="12" rx="2.4" />
+      <path d="M7 10h.01M11 10h.01M15 10h.01M17.5 13.5h.01M8 13.5h8" />
+    </svg>
+  );
+}
+
 export function IconShuffle(props: IconProps) {
   return (
     <svg {...base(props)}>
