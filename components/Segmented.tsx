@@ -65,14 +65,14 @@ export function Segmented<T extends string>({
               );
               buttons?.[(index + delta + options.length) % options.length]?.focus();
             }}
-            className={`relative z-10 whitespace-nowrap rounded-full ${pad} ${text} font-medium transition-colors duration-200 ${
+            className={`wt-press relative z-10 whitespace-nowrap rounded-full ${pad} ${text} font-medium transition-colors duration-200 ${
               active ? "text-[var(--fg)]" : "text-[var(--fg-2)] hover:text-[var(--fg)]"
             }`}
           >
             {active ? (
               <motion.span
                 layoutId={layoutId}
-                transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.7 }}
+                transition={{ type: "spring", duration: 0.45, bounce: 0.18 }}
                 className="absolute inset-0 -z-10 rounded-full bg-[var(--glass-strong)] shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
               />
             ) : null}

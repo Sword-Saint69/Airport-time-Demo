@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import {
   IconClockFace,
@@ -86,6 +86,27 @@ function PillSlider({
   );
 }
 
+/** The +/- glyph in an accordion header: the plus rotates away as the minus rotates in. */
+function AccordionGlyph({ open }: { open: boolean }) {
+  const ease = "cubic-bezier(0.23, 1, 0.32, 1)";
+  return (
+    <span className="relative ml-auto grid h-5 w-5 place-items-center text-[#8a8a8e]">
+      <IconPlus
+        size={12}
+        className={`absolute transition-all duration-200 ease-[${ease}] ${
+          open ? "rotate-90 scale-75 opacity-0" : "rotate-0 scale-100 opacity-100"
+        }`}
+      />
+      <IconMinus
+        size={12}
+        className={`absolute transition-all duration-200 ease-[${ease}] ${
+          open ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-75 opacity-0"
+        }`}
+      />
+    </span>
+  );
+}
+
 export interface PreferencesPanelProps {
   open: boolean;
   boardMode: BoardMode;
@@ -142,16 +163,29 @@ export function PreferencesPanel({
   const [queueOpen, setQueueOpen] = useState(false);
 
   const track = LOFI_TRACKS[music.trackIndex] ?? LOFI_TRACKS[0];
+  const reduceMotion = useReducedMotion();
 
   return (
     <AnimatePresence>
       {open ? (
         <motion.aside
           key="drawer"
-          initial={{ opacity: 0, x: -26 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -26 }}
-          transition={{ type: "spring", stiffness: 320, damping: 34 }}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={{
+            hidden: {
+              opacity: 0,
+              x: reduceMotion ? 0 : -24,
+              // Exits are always faster than entrances.
+              transition: { duration: 0.18, ease: [0.32, 0, 0.67, 0] },
+            },
+            visible: {
+              opacity: 1,
+              x: 0,
+              transition: { type: "spring", duration: 0.5, bounce: 0.12 },
+            },
+          }}
           className="fixed left-3 top-3 z-50 flex h-[calc(100dvh_-_24px)] w-[276px] flex-col overflow-hidden rounded-2xl border border-[#262626] bg-[#181818] text-[#e9e9ec] shadow-[0_30px_70px_-24px_rgba(0,0,0,0.8)]"
           aria-label="System preferences"
         >
@@ -182,7 +216,7 @@ export function PreferencesPanel({
               aria-label={`Clock face, ${
                 boardMode === "fids" ? "FIDS" : "Digital"
               } rendering. Switch rendering.`}
-              className="flex items-center gap-3 rounded-xl bg-[#222222] p-3.5 text-left transition-colors hover:bg-[#262626]"
+              className="wt-press flex items-center gap-3 rounded-xl bg-[#222222] p-3.5 text-left transition-colors duration-200 hover:bg-[#262626]"
             >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#1d7dfa] text-white">
                 <IconClockFace size={17} />
@@ -223,23 +257,31 @@ export function PreferencesPanel({
                     type="button"
                     onClick={onMusicPrevious}
                     aria-label="Previous track"
-                    className="text-white/90 transition-opacity hover:opacity-70"
+                    className="wt-press text-white/90 transition-opacity duration-200 hover:opacity-70"
                   >
                     <IconPrev size={15} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={onMusicToggle}
-                    aria-label={music.playing ? "Pause" : "Play"}
-                    className="text-white transition-opacity hover:opacity-70"
-                  >
-                    {music.playing ? <IconPause size={16} /> : <IconPlay size={16} />}
-                  </button>
+                  <span className="relative grid place-items-center">
+                    {music.playing ? (
+                      <span
+                        aria-hidden="true"
+                        className="wt-pulse-ring pointer-events-none absolute inset-0 rounded-full border border-white/40"
+                      />
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={onMusicToggle}
+                      aria-label={music.playing ? "Pause" : "Play"}
+                      className="wt-press relative grid h-8 w-8 place-items-center rounded-full text-white transition-opacity duration-200 hover:opacity-70"
+                    >
+                      {music.playing ? <IconPause size={16} /> : <IconPlay size={16} />}
+                    </button>
+                  </span>
                   <button
                     type="button"
                     onClick={onMusicNext}
                     aria-label="Next track"
-                    className="text-white/90 transition-opacity hover:opacity-70"
+                    className="wt-press text-white/90 transition-opacity duration-200 hover:opacity-70"
                   >
                     <IconNext size={15} />
                   </button>
@@ -252,8 +294,8 @@ export function PreferencesPanel({
                     aria-pressed={music.shuffle}
                     className={
                       music.shuffle
-                        ? "text-white transition-opacity hover:opacity-70"
-                        : "text-[#5f5f63] transition-colors hover:text-[#8a8a8e]"
+                        ? "wt-press text-white transition-opacity duration-200 hover:opacity-70"
+                        : "wt-press text-[#5f5f63] transition-colors duration-200 hover:text-[#8a8a8e]"
                     }
                   >
                     <IconShuffle size={15} />
@@ -265,8 +307,8 @@ export function PreferencesPanel({
                     aria-expanded={queueOpen}
                     className={
                       queueOpen
-                        ? "text-white transition-opacity hover:opacity-70"
-                        : "text-[#5f5f63] transition-colors hover:text-[#8a8a8e]"
+                        ? "wt-press text-white transition-opacity duration-200 hover:opacity-70"
+                        : "wt-press text-[#5f5f63] transition-colors duration-200 hover:text-[#8a8a8e]"
                     }
                   >
                     <IconQueue size={15} />
@@ -281,29 +323,38 @@ export function PreferencesPanel({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
+                    transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     className="overflow-hidden"
                   >
                     <div className="my-3 h-px bg-[#2e2e2e]" />
                     {LOFI_TRACKS.map((t, i) => (
-                      <li key={t.title}>
+                      <motion.li
+                        key={t.title}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.22,
+                          ease: [0.23, 1, 0.32, 1],
+                          delay: i * 0.04,
+                        }}
+                      >
                         <button
                           type="button"
                           onClick={() => onMusicSelect(i)}
-                          className={`flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-[#2a2a2a] ${
+                          className={`wt-press flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition-colors duration-200 hover:bg-[#2a2a2a] ${
                             i === music.trackIndex ? "text-white" : "text-[#8a8a8e]"
                           }`}
                         >
                           <span className="truncate text-[11px]">{t.title}</span>
                           {i === music.trackIndex && music.playing ? (
                             <span className="ml-auto flex h-2.5 items-end gap-[2px]">
-                              <span className="w-[2px] origin-bottom animate-[wt-eq_900ms_ease-in-out_infinite] bg-white/80" style={{ height: "60%" }} />
-                              <span className="w-[2px] origin-bottom animate-[wt-eq_900ms_ease-in-out_infinite_120ms] bg-white/80" style={{ height: "100%" }} />
-                              <span className="w-[2px] origin-bottom animate-[wt-eq_900ms_ease-in-out_infinite_240ms] bg-white/80" style={{ height: "45%" }} />
+                              <span className="wt-eq w-[2px] origin-bottom bg-white/80 [animation:wt-eq_900ms_ease-in-out_infinite]" style={{ height: "60%" }} />
+                              <span className="wt-eq w-[2px] origin-bottom bg-white/80 [animation:wt-eq_900ms_ease-in-out_infinite_120ms]" style={{ height: "100%" }} />
+                              <span className="wt-eq w-[2px] origin-bottom bg-white/80 [animation:wt-eq_900ms_ease-in-out_infinite_240ms]" style={{ height: "45%" }} />
                             </span>
                           ) : null}
                         </button>
-                      </li>
+                      </motion.li>
                     ))}
                   </motion.ul>
                 ) : null}
@@ -328,8 +379,8 @@ export function PreferencesPanel({
                     aria-checked={active}
                     tabIndex={active ? 0 : -1}
                     onClick={() => onColorChange(swatch.id)}
-                    className={`h-7 w-[38px] rounded-lg transition-transform duration-200 ${
-                      active ? "scale-105" : "hover:scale-[1.04]"
+                    className={`h-7 w-[38px] rounded-lg transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                      active ? "scale-105" : "hover:scale-[1.04] active:scale-[0.97]"
                     }`}
                     style={{
                       background: swatch.value,
@@ -348,15 +399,13 @@ export function PreferencesPanel({
                 type="button"
                 onClick={() => setSoundOpen((v) => !v)}
                 aria-expanded={soundOpen}
-                className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
+                className="wt-press flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
               >
                 <IconSpeaker size={15} className="shrink-0 text-[#9a9a9a]" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#c9c9cc]">
                   Sound System
                 </span>
-                <span className="ml-auto grid h-5 w-5 place-items-center rounded text-[#8a8a8e]">
-                  {soundOpen ? <IconMinus size={12} /> : <IconPlus size={12} />}
-                </span>
+                <AccordionGlyph open={soundOpen} />
               </button>
 
               <AnimatePresence initial={false}>
@@ -366,7 +415,7 @@ export function PreferencesPanel({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
+                    transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     className="overflow-hidden"
                   >
                     <div className="px-3.5 pb-3.5">
@@ -385,12 +434,17 @@ export function PreferencesPanel({
                               aria-checked={active}
                               tabIndex={active ? 0 : -1}
                               onClick={() => onSoundChange(mode.value)}
-                              className={`flex-1 rounded-md py-1.5 text-[11px] font-medium transition-colors ${
-                                active
-                                  ? "bg-[#141414] text-white"
-                                  : "text-[#8a8a8e] hover:text-[#c9c9cc]"
+                              className={`wt-press relative z-10 flex-1 rounded-md py-1.5 text-[11px] font-medium transition-colors duration-200 ${
+                                active ? "text-white" : "text-[#8a8a8e] hover:text-[#c9c9cc]"
                               }`}
                             >
+                              {active ? (
+                                <motion.span
+                                  layoutId="pref-sound-pill"
+                                  transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
+                                  className="absolute inset-0 -z-10 rounded-md bg-[#141414]"
+                                />
+                              ) : null}
                               {mode.label}
                             </button>
                           );
@@ -421,15 +475,13 @@ export function PreferencesPanel({
                 type="button"
                 onClick={() => setDiscoverOpen((v) => !v)}
                 aria-expanded={discoverOpen}
-                className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
+                className="wt-press flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
               >
                 <IconDotGrid size={15} className="shrink-0 text-[#9a9a9a]" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#c9c9cc]">
                   Discover more by CO.
                 </span>
-                <span className="ml-auto grid h-5 w-5 place-items-center rounded text-[#8a8a8e]">
-                  {discoverOpen ? <IconMinus size={12} /> : <IconPlus size={12} />}
-                </span>
+                <AccordionGlyph open={discoverOpen} />
               </button>
 
               <AnimatePresence initial={false}>
@@ -439,7 +491,7 @@ export function PreferencesPanel({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
+                    transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     className="overflow-hidden"
                   >
                     <div className="px-3.5 pb-3.5">
@@ -449,7 +501,7 @@ export function PreferencesPanel({
                       </p>
                       <button
                         type="button"
-                        className="mt-2.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#111113] transition-transform active:scale-95"
+                        className="wt-press mt-2.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#111113]"
                       >
                         Get the app
                       </button>
@@ -465,15 +517,13 @@ export function PreferencesPanel({
                 type="button"
                 onClick={() => setSupportOpen((v) => !v)}
                 aria-expanded={supportOpen}
-                className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
+                className="wt-press flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
               >
                 <IconLifebuoy size={15} className="shrink-0 text-[#9a9a9a]" />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#c9c9cc]">
                   Support
                 </span>
-                <span className="ml-auto grid h-5 w-5 place-items-center rounded text-[#8a8a8e]">
-                  {supportOpen ? <IconMinus size={12} /> : <IconPlus size={12} />}
-                </span>
+                <AccordionGlyph open={supportOpen} />
               </button>
 
               <AnimatePresence initial={false}>
@@ -483,7 +533,7 @@ export function PreferencesPanel({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
+                    transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     className="overflow-hidden"
                   >
                     <div className="px-3.5 pb-3.5 text-[11px] leading-snug text-[#8a8a8e]">

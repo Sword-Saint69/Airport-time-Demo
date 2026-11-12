@@ -92,20 +92,30 @@ export function BottomBar({
               initial={{ opacity: 0, y: 10, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              transition={{ type: "spring", duration: 0.42, bounce: 0.14 }}
+              style={{ transformOrigin: "bottom center" }}
               className="absolute bottom-[calc(100%+10px)] left-1/2 w-[min(360px,86vw)] -translate-x-1/2 overflow-hidden rounded-2xl bg-[var(--bg-elev)]/95 p-1.5 shadow-[var(--shadow-panel)] backdrop-blur-2xl"
             >
               {suggestions.length > 0 ? (
                 <ul className="flex flex-col">
-                  {suggestions.map((city) => {
+                  {suggestions.map((city, i) => {
                     const gmt = getGmtOffset(city, now);
                     const day = isDaytime(city.timeZone, now);
                     return (
-                      <li key={city.id}>
+                      <motion.li
+                        key={city.id}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.2,
+                          ease: [0.23, 1, 0.32, 1],
+                          delay: i * 0.035,
+                        }}
+                      >
                         <button
                           type="button"
                           onClick={() => pick(city)}
-                          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-[var(--glass)]"
+                          className="wt-press flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors duration-200 hover:bg-[var(--glass)]"
                         >
                           <span className="shrink-0 text-[12px]" aria-hidden="true">
                             {day ? "☀️" : "🌙"}
@@ -118,7 +128,7 @@ export function BottomBar({
                             {gmt.label}
                           </span>
                         </button>
-                      </li>
+                      </motion.li>
                     );
                   })}
                 </ul>
@@ -130,7 +140,7 @@ export function BottomBar({
         </AnimatePresence>
 
         <div
-          className={`flex h-9 items-center gap-2 rounded-full bg-[var(--glass)] px-3.5 backdrop-blur-xl transition-colors ${
+          className={`wt-lift flex h-9 items-center gap-2 rounded-full bg-[var(--glass)] px-3.5 backdrop-blur-xl transition-colors duration-200 ${
             open ? "bg-[var(--glass-strong)]" : ""
           }`}
         >
@@ -138,7 +148,7 @@ export function BottomBar({
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label="Search cities"
-            className="text-[var(--fg-2)] transition-colors hover:text-[var(--fg)]"
+            className="wt-press text-[var(--fg-2)] transition-colors duration-200 hover:text-[var(--fg)]"
           >
             <IconSearch size={16} />
           </button>

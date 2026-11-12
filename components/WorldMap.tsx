@@ -266,7 +266,7 @@ export default function WorldMap(props: WorldMapProps): React.ReactElement {
               onClick={onMarkerClick ? () => onMarkerClick(marker.id) : undefined}
               aria-label={accessibleName}
               title={marker.name}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-[rgba(38,38,38,0.85)] text-[10px] leading-none text-white backdrop-blur-[6px] transition-[background-color,transform] duration-200 hover:bg-[rgba(56,56,56,0.92)] ${
+              className={`wt-lift absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-[rgba(38,38,38,0.85)] text-[10px] leading-none text-white backdrop-blur-[6px] transition-[background-color,transform] duration-200 hover:bg-[rgba(56,56,56,0.92)] ${
                 active
                   ? "z-20 px-2.5 py-[5px] text-[10px]"
                   : "z-10 px-2 py-[3px]"

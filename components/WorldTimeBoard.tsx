@@ -39,9 +39,6 @@ const DOT_INSET = 0.07;
 const DOT_SIZE = 1 - DOT_INSET * 2;
 const DOT_RADIUS = 0.3;
 
-/** How far a non-selected row is dimmed once a city has been picked. */
-const DIMMED_OPACITY = 0.24;
-
 const PATTERN_ID = "wt-board-dots";
 
 function litDotsFor(text: string, originCol: number) {
@@ -86,15 +83,14 @@ const BoardLine = memo(function BoardLine({
   const overflow = textColumns(label) > CITY_FIELD_COLS;
 
   return (
+    // The dimming lives on a wrapper so it never fights the entrance
+    // animation on the row itself.
     <g
+      className={`wt-row-wrap${dimmed ? " is-dimmed" : ""}`}
       transform={`translate(0 ${top})`}
-      style={{
-        opacity: dimmed ? DIMMED_OPACITY : 1,
-        transition: "opacity 280ms ease",
-      }}
     >
       <g
-        className="wt-row-in"
+        className="wt-row wt-row-in"
         style={{ animationDelay: `${rowIndex * 55}ms`, cursor: "pointer" }}
         onClick={() => onSelectCity?.(city)}
         role="button"
@@ -207,7 +203,7 @@ export function WorldTimeBoard({ cities, now, activeId, onSelectCity }: WorldTim
   return (
     <svg
       viewBox={`0 0 ${MATRIX_COLS} ${height}`}
-      className="h-auto w-full"
+      className="wt-board h-auto w-full"
       preserveAspectRatio="xMidYMid meet"
       role="group"
       aria-label="World time board"
@@ -296,19 +292,14 @@ export function DigitalBoard({
       {cities.map((city) => {
         const time = formatCityClock(city, now);
         const active = hasSelection && city.id === activeId;
-        const dimmed = hasSelection && !active;
         return (
           <li key={city.id}>
             <button
               type="button"
               onClick={() => onSelectCity?.(city)}
               aria-current={active ? "true" : undefined}
-              className={`flex w-full items-baseline gap-[1.1em] rounded-lg px-[0.45em] py-[0.15em] text-left transition-all duration-300 ${
-                active
-                  ? "text-[var(--fg)]"
-                  : dimmed
-                    ? "text-[var(--fg)] opacity-25 hover:opacity-70"
-                    : "text-[var(--fg-2)] hover:text-[var(--fg)]"
+              className={`wt-row flex w-full items-baseline gap-[1.1em] rounded-lg px-[0.45em] py-[0.15em] text-left text-[var(--fg)] transition-opacity duration-300 hover:opacity-100 ${
+                active ? "opacity-100" : "opacity-45"
               }`}
             >
               <span className="w-[4.6em] shrink-0 font-semibold tracking-[0.02em]">{time}</span>

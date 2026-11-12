@@ -25,9 +25,9 @@ export function GlassButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      whileTap={{ scale: 0.92 }}
-      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      className={`grid h-9 w-9 place-items-center rounded-full bg-[var(--glass)] text-[var(--fg-2)] backdrop-blur-xl transition-colors hover:text-[var(--fg)] ${
+      whileTap={{ scale: 0.94 }}
+      transition={{ type: "spring", duration: 0.32, bounce: 0.15 }}
+      className={`grid h-9 w-9 place-items-center rounded-full bg-[var(--glass)] text-[var(--fg-2)] backdrop-blur-xl transition-colors duration-200 hover:text-[var(--fg)] ${
         active ? "text-[var(--fg)]" : ""
       } ${className}`}
     >

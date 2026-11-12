@@ -157,7 +157,7 @@ export function FocusView({ onSound }: FocusViewProps) {
           type="button"
           onClick={toggle}
           aria-label={running ? "Pause timer" : "Start timer"}
-          className="grid h-14 w-14 place-items-center rounded-full bg-[var(--glass-strong)] text-[var(--fg)] transition-transform active:scale-95"
+          className="grid h-14 w-14 place-items-center rounded-full bg-[var(--glass-strong)] text-[var(--fg)] transition-transform duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97]"
         >
           {running ? <IconPause size={22} /> : <IconPlay size={22} />}
         </button>
