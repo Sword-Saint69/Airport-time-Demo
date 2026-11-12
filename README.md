@@ -112,8 +112,8 @@ The `Clock / Map` toggle swaps the board for a dot-matrix world map:
 `Clock / Map` pills while it is open. It contains:
 
 - the **Clock Face** card (Digital ⇄ FIDS);
-- the **lo-fi player** — a real generative Web Audio engine with a chord pad,
-  a vinyl-noise bed, shuffle, a queue and its own volume;
+- the **music player** — plays "Spotlight" with a scrubber, a queue, shuffle
+  and its own volume;
 - the five **theme swatches** (Pastel Lime, Warm Yellow, White, Dark Charcoal,
   Ice Blue) which re-tint the board and the canvas;
 - the **SOUND SYSTEM** accordion with a `Mute / System / Watch` switch and two
@@ -240,7 +240,7 @@ lib/
   useCities.ts       favourites and the board layout
   useKeyboardShortcuts.ts
   worldmap.ts        the 150x75 land bitmap
-  lofi.ts            the generative lo-fi engine
+  music.ts           the music player
   useNow.ts          a clock that re-aligns to the wall clock every second
 ```
 
@@ -287,7 +287,7 @@ building.
    Digital/FIDS; it could offer a gallery of faces instead.
 10. **Per-city custom layouts.** Let a city be pinned to a board slot, given a
     nickname, or reordered.
-11. **More lo-fi tracks**, plus an equaliser and a sleep timer.
+11. **More tracks**, plus an equaliser and a sleep timer.
 12. **An appearance section** for the chrome itself — the drawer's colours,
     the corner radius, the density of the layout.
 
